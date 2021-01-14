@@ -50,7 +50,11 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		try {
 			getWriter().append(syslogFrame);
 		} catch (final IOException e) {
-			close();
+			try {
+				close();
+			} catch (final IOException e1) {
+				// ignore because it should not hide the original exception
+			}
 			throw e;
 		}
 	}
@@ -65,6 +69,23 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	@Override
 	public void close() throws IOException {
+		closeWriter();
+		closeSocket();
+	}
+
+	private void closeSocket() {
+		try {
+			if (socket.isPresent()) {
+				socket.get().close();
+			}
+		} catch (final IOException e) {
+			// ignore
+		} finally {
+			socket = Optional.empty();
+		}
+	}
+
+	private void closeWriter() {
 		try {
 			final Optional<BufferedWriter> ow = getOptionalWriter();
 			if (ow.isPresent()) {
@@ -72,12 +93,8 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 			}
 		} catch (final IOException e) {
 			// ignore
+		} finally {
+			writer = Optional.empty();
 		}
-		if (socket.isPresent()) {
-			socket.get().close();
-		}
-
-		writer = Optional.empty();
-		socket = Optional.empty();
 	}
 }
