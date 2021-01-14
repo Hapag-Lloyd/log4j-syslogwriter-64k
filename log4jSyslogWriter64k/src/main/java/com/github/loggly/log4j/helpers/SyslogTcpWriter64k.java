@@ -21,21 +21,21 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		super(syslogHost, charset);
 	}
 
-	private Optional<Socket> socket = Optional.empty();
+	private volatile Optional<Socket> socket = Optional.empty();
 
-	private Optional<BufferedWriter> writer = Optional.empty();
+	private volatile Optional<BufferedWriter> writer = Optional.empty();
 
-	private Optional<BufferedWriter> getOptionalWriter() {
-		return writer;
-	}
+	private final Object lock = new Object();
 
-	private synchronized BufferedWriter getWriter() throws IOException {
-		if (!writer.isPresent()) {
-			socket = Optional.of(new Socket(getSyslogHost(), getSyslogPort()));
-			writer = Optional
-					.of(new BufferedWriter(new OutputStreamWriter(socket.get().getOutputStream(), getCharset())));
+	private BufferedWriter getWriter() throws IOException {
+		synchronized (lock) {
+			if (!writer.isPresent()) {
+				socket = Optional.of(new Socket(getSyslogHost(), getSyslogPort()));
+				writer = Optional
+						.of(new BufferedWriter(new OutputStreamWriter(socket.get().getOutputStream(), getCharset())));
+			}
+			return writer.get();
 		}
-		return writer.get();
 	}
 
 	@Override
@@ -52,7 +52,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		} catch (final IOException e) {
 			try {
 				close();
-			} catch (final IOException e1) {
+			} catch (final IOException ignore) {
 				// ignore because it should not hide the original exception
 			}
 			throw e;
@@ -61,40 +61,33 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	@Override
 	public void flush() throws IOException {
-		final Optional<BufferedWriter> ow = getOptionalWriter();
-		if (ow.isPresent()) {
-			ow.get().flush();
+		final Optional<BufferedWriter> writerToFlush = writer;
+		if (writerToFlush.isPresent()) {
+			writerToFlush.get().flush();
 		}
 	}
 
 	@Override
 	public void close() throws IOException {
-		closeWriter();
-		closeSocket();
-	}
+		final Optional<BufferedWriter> writerToClose;
+		final Optional<Socket> socketToClose;
 
-	private void closeSocket() {
-		try {
-			if (socket.isPresent()) {
-				socket.get().close();
-			}
-		} catch (final IOException e) {
-			// ignore
-		} finally {
+		synchronized (lock) {
+			writerToClose = writer;
+			writer = Optional.empty();
+
+			socketToClose = socket;
 			socket = Optional.empty();
 		}
-	}
 
-	private void closeWriter() {
 		try {
-			final Optional<BufferedWriter> ow = getOptionalWriter();
-			if (ow.isPresent()) {
-				ow.get().close();
+			if (writerToClose.isPresent()) {
+				writerToClose.get().close();
 			}
-		} catch (final IOException e) {
-			// ignore
 		} finally {
-			writer = Optional.empty();
+			if (socketToClose.isPresent()) {
+				socketToClose.get().close();
+			}
 		}
 	}
 }
