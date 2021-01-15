@@ -9,8 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
- * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that it behaves like a
- * java.io.Writer.
+ * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that
+ * it behaves like a java.io.Writer.
  */
 public class SyslogTcpWriter64k extends SyslogWriter64k {
 	public SyslogTcpWriter64k(final String syslogHost) {
@@ -21,19 +21,21 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		super(syslogHost, charset);
 	}
 
-	private Optional<Socket> socket = Optional.empty();
-	private Optional<BufferedWriter> writer = Optional.empty();
+	private volatile Optional<Socket> socket = Optional.empty();
 
-	private Optional<BufferedWriter> getOptionalWriter() {
-		return writer;
-	}
+	private volatile Optional<BufferedWriter> writer = Optional.empty();
 
-	private synchronized BufferedWriter getWriter() throws IOException {
-		if (!writer.isPresent()) {
-			socket = Optional.of(new Socket(getSyslogHost(), getSyslogPort()));
-			writer = Optional.of(new BufferedWriter(new OutputStreamWriter(socket.get().getOutputStream(), getCharset())));
+	private final Object lock = new Object();
+
+	private BufferedWriter getWriter() throws IOException {
+		synchronized (lock) {
+			if (!writer.isPresent()) {
+				socket = Optional.of(new Socket(getSyslogHost(), getSyslogPort()));
+				writer = Optional
+						.of(new BufferedWriter(new OutputStreamWriter(socket.get().getOutputStream(), getCharset())));
+			}
+			return writer.get();
 		}
-		return writer.get();
 	}
 
 	@Override
@@ -45,30 +47,47 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	public void write(final String string) throws IOException {
 		// compute syslog frame according to: https://tools.ietf.org/html/rfc6587
 		final String syslogFrame = String.format("%s %s", string.length(), string);
-
-		getWriter().append(syslogFrame);
+		try {
+			getWriter().append(syslogFrame);
+		} catch (final IOException e) {
+			try {
+				close();
+			} catch (final IOException ignore) {
+				// ignore because it should not hide the original exception
+			}
+			throw e;
+		}
 	}
 
 	@Override
 	public void flush() throws IOException {
-		final Optional<BufferedWriter> ow = getOptionalWriter();
-		if (ow.isPresent()) {
-			ow.get().flush();
+		final Optional<BufferedWriter> writerToFlush = writer;
+		if (writerToFlush.isPresent()) {
+			writerToFlush.get().flush();
 		}
 	}
 
 	@Override
 	public void close() throws IOException {
-		try {
-			final Optional<BufferedWriter> ow = getOptionalWriter();
-			if (ow.isPresent()) {
-				ow.get().close();
-			}
-		} catch (final IOException e) {
-			// ignore
+		final Optional<BufferedWriter> writerToClose;
+		final Optional<Socket> socketToClose;
+
+		synchronized (lock) {
+			writerToClose = writer;
+			writer = Optional.empty();
+
+			socketToClose = socket;
+			socket = Optional.empty();
 		}
-		if (socket.isPresent()) {
-			socket.get().close();
+
+		try {
+			if (writerToClose.isPresent()) {
+				writerToClose.get().close();
+			}
+		} finally {
+			if (socketToClose.isPresent()) {
+				socketToClose.get().close();
+			}
 		}
 	}
 }
