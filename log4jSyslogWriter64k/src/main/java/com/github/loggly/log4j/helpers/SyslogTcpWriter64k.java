@@ -13,6 +13,12 @@ import java.util.Optional;
  * it behaves like a java.io.Writer.
  */
 public class SyslogTcpWriter64k extends SyslogWriter64k {
+	private volatile Optional<Socket> socket = Optional.empty();
+
+	private volatile Optional<BufferedWriter> writer = Optional.empty();
+
+	private final Object lock = new Object();
+
 	public SyslogTcpWriter64k(final String syslogHost) {
 		this(syslogHost, StandardCharsets.UTF_8);
 	}
@@ -21,11 +27,13 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		super(syslogHost, charset);
 	}
 
-	private volatile Optional<Socket> socket = Optional.empty();
-
-	private volatile Optional<BufferedWriter> writer = Optional.empty();
-
-	private final Object lock = new Object();
+	@Override
+	public void flush() throws IOException {
+		final Optional<BufferedWriter> writerToFlush = writer;
+		if (writerToFlush.isPresent()) {
+			closeOnIOException(() -> writerToFlush.get().flush());
+		}
+	}
 
 	private BufferedWriter getWriter() throws IOException {
 		synchronized (lock) {
@@ -39,32 +47,15 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	}
 
 	@Override
-	public void write(final char[] buf, final int off, final int len) throws IOException {
-		this.write(new String(buf, off, len));
-	}
-
-	@Override
 	public void write(final String string) throws IOException {
 		// compute syslog frame according to: https://tools.ietf.org/html/rfc6587
 		final String syslogFrame = String.format("%s %s", string.length(), string);
-		try {
-			getWriter().append(syslogFrame);
-		} catch (final IOException e) {
-			try {
-				close();
-			} catch (final IOException ignore) {
-				// ignore because it should not hide the original exception
-			}
-			throw e;
-		}
+		closeOnIOException(() -> getWriter().append(syslogFrame));
 	}
 
 	@Override
-	public void flush() throws IOException {
-		final Optional<BufferedWriter> writerToFlush = writer;
-		if (writerToFlush.isPresent()) {
-			writerToFlush.get().flush();
-		}
+	public void write(final char[] buf, final int off, final int len) throws IOException {
+		this.write(new String(buf, off, len));
 	}
 
 	@Override
@@ -89,5 +80,23 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 				socketToClose.get().close();
 			}
 		}
+	}
+
+	private void closeOnIOException(final IORunnable runnable) throws IOException {
+		try {
+			runnable.run();
+		} catch (final IOException e) {
+			try {
+				close();
+			} catch (final IOException ignore) {
+				// ignore because it should not hide the original exception
+			}
+			throw e;
+		}
+	}
+
+	@FunctionalInterface
+	private interface IORunnable {
+		void run() throws IOException;
 	}
 }
