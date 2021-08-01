@@ -25,6 +25,8 @@
 
 		<eclipse.compiler.javadoc>disabled</eclipse.compiler.javadoc>
 		<eclipse.compiler.nullAnalysis>disabled</eclipse.compiler.nullAnalysis>
+
+		<gpg.skip>true</gpg.skip>
 	</properties>
 
 	<dependencies>
