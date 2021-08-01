@@ -10,31 +10,31 @@ import java.nio.charset.Charset;
 
 import org.apache.log4j.helpers.LogLog;
 
-/**
- * TODO write javadoc
- */
 abstract class SyslogWriter64k extends Writer {
 	private static final int DEFAULT_SYSLOG_PORT = 514;
 
 	private final Charset charset;
+
 	private final InetAddress syslogHost;
+
 	private final int syslogPort;
 
-	public SyslogWriter64k(final String syslogHost, final Charset charset) {
+	@SuppressWarnings("PMD.GuardLogStatement")
+	protected SyslogWriter64k(final String syslogHost, final Charset charset) {
 		this.charset = charset;
 
 		InetAddress host = null;
-		int port = DEFAULT_SYSLOG_PORT;
+		int port = -1;
 		try {
-			if (!syslogHost.contains(":")) {
-				host = InetAddress.getByName(syslogHost);
-				port = DEFAULT_SYSLOG_PORT;
-			} else {
+			if (syslogHost.contains(":")) {
 				final URL url = new URL("http://" + syslogHost);
 				host = InetAddress.getByName(url.getHost());
 				port = url.getPort();
+			} else {
+				host = InetAddress.getByName(syslogHost);
+				port = DEFAULT_SYSLOG_PORT;
 			}
-		} catch (UnknownHostException | MalformedURLException e) {
+		} catch (final UnknownHostException | MalformedURLException e) {
 			LogLog.error("Could not find " + syslogHost + ". All logging will FAIL.", e);
 		}
 		this.syslogHost = host;
