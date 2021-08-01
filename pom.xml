@@ -5,8 +5,8 @@
 	<parent>
 		<groupId>de.lars-sh</groupId>
 		<artifactId>parent</artifactId>
-		<version>0.9.7</version>
-		<relativePath></relativePath>
+		<version>0.9.12</version>
+		<relativePath />
 	</parent>
 
 	<groupId>com.hlag</groupId>
@@ -18,10 +18,11 @@
 
 	<properties>
 		<parent-pom.create-changelog-md>false</parent-pom.create-changelog-md>
-		<parent-pom.create-readme-md>false</parent-pom.create-readme-md>
-		<parent-pom.default-sources-folder>java</parent-pom.default-sources-folder>
 		<parent-pom.create-lombok-config>false</parent-pom.create-lombok-config>
-		<parent-pom.create-travis-yml>false</parent-pom.create-travis-yml>
+		<parent-pom.default-sources-folder>java</parent-pom.default-sources-folder>
+		<parent-pom.github.organization>Hapag-Lloyd</parent-pom.github.organization>
+		<parent-pom.github.project>log4j-syslogwriter-64k</parent-pom.github.project>
+
 		<eclipse.compiler.javadoc>disabled</eclipse.compiler.javadoc>
 		<eclipse.compiler.nullAnalysis>disabled</eclipse.compiler.nullAnalysis>
 		<maven.javadoc.failOnError>false</maven.javadoc.failOnError>
