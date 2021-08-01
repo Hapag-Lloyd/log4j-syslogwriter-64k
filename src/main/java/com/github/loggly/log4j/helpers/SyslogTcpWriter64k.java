@@ -17,8 +17,6 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	private volatile Optional<BufferedWriter> writer = Optional.empty();
 
-	private final Object lock = new Object();
-
 	public SyslogTcpWriter64k(final String syslogHost) {
 		this(syslogHost, StandardCharsets.UTF_8);
 	}
@@ -35,6 +33,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		}
 	}
 
+	@SuppressWarnings("resource")
 	private BufferedWriter getWriter() throws IOException {
 		synchronized (lock) {
 			if (!writer.isPresent()) {
@@ -88,7 +87,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		} catch (final IOException e) {
 			try {
 				close();
-			} catch (final IOException ignore) {
+			} catch (@SuppressWarnings("unused") final IOException ignore) {
 				// ignore because it should not hide the original exception
 			}
 			throw e;
