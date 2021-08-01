@@ -169,6 +169,9 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	/**
 	 * Returns the specified syslog facility as a lower-case String, e.g. "kern",
 	 * "user", etc.
+	 *
+	 * @param syslogFacility the integer value of a facility
+	 * @return the facility name of {@code syslogFacility}
 	 */
 	@SuppressFBWarnings(value = "OPM_OVERLY_PERMISSIVE_METHOD", justification = "Public API")
 	public static String getFacilityString(final int syslogFacility) {
@@ -183,6 +186,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 *                     SYSLOG, LPR, NEWS, UUCP, CRON, AUTHPRIV, FTP, LOCAL0,
 	 *                     LOCAL1, LOCAL2, LOCAL3, LOCAL4, LOCAL5, LOCAL6, LOCAL7.
 	 *                     The matching is case-insensitive.
+	 * @return the integer value corresponding to {@code factilityName}
 	 * @since 1.1
 	 */
 	@SuppressFBWarnings(value = "OPM_OVERLY_PERMISSIVE_METHOD", justification = "Public API")
@@ -197,13 +201,13 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	// Have LOG_USER as default
 	private int syslogFacility = LOG_USER;
 
-	private String facilityString;
+	private String facilityString = null;
 
 	private boolean facilityPrinting = false;
 
 	private Optional<SyslogQuietWriter> syslogQuietWriter = Optional.empty();
 
-	private String syslogHost;
+	private String syslogHost = null;
 
 	private String protocol = DEFAULT_PROTOCOL;
 
@@ -287,6 +291,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 		}
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	@SuppressWarnings({ "PMD.CloseResource", "PMD.GuardLogStatement" })
 	public void append(final LoggingEvent event) {
@@ -392,6 +397,9 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	/**
 	 * Returns the value of the <b>SyslogHost</b> option.
+	 *
+	 * @return syslogHost the syslog host, optionally including a port. Might be
+	 *         {@code null} if not initialized.
 	 */
 	public String getSyslogHost() {
 		return syslogHost;
@@ -403,6 +411,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * and port number to a host name, an IPv4 address or an IPv6 address enclosed
 	 * in square brackets. <b>WARNING</b> If the SyslogHost is not set, then this
 	 * appender will fail.
+	 *
+	 * @param syslogHost the syslog host, optionally including a port
 	 */
 	public final void setSyslogHost(final String syslogHost) {
 		this.syslogHost = syslogHost;
@@ -443,6 +453,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * LOCAL0, LOCAL1, LOCAL2, LOCAL3, LOCAL4, LOCAL5, LOCAL6, LOCAL7. Case is
 	 * unimportant.
 	 *
+	 * @param facilityName the facility name
 	 * @since 0.8.1
 	 */
 	@SuppressWarnings("PMD.GuardLogStatement")
@@ -465,6 +476,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	/**
 	 * Returns the value of the <b>Facility</b> option.
+	 *
+	 * @return the facility name
 	 */
 	@SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
 	@SuppressFBWarnings(value = "MOM_MISLEADING_OVERLOAD_MODEL", justification = "Existing model")
@@ -476,6 +489,9 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * If the <b>FacilityPrinting</b> option is set to true, the printed message
 	 * will include the facility name of the application. It is <em>false</em> by
 	 * default.
+	 *
+	 * @param facilityPrinting {@code true} to include the facility name of the
+	 *                         application, {@code false} to exclude it.
 	 */
 	public void setFacilityPrinting(final boolean facilityPrinting) {
 		this.facilityPrinting = facilityPrinting;
@@ -483,6 +499,9 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	/**
 	 * Returns the value of the <b>FacilityPrinting</b> option.
+	 *
+	 * @return {@code true} if the facility name of the application is included,
+	 *         else {@code false}
 	 */
 	@SuppressWarnings("PMD.BooleanGetMethodName")
 	public boolean getFacilityPrinting() {
@@ -495,6 +514,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * with existing behavior, however should be true unless there is a specific
 	 * justification.
 	 *
+	 * @param facilityPrinting {@code true} to produce the syslog header part,
+	 *                         {@code false} to exclude it.
 	 * @since 1.2.15
 	 */
 	@SuppressWarnings("PMD.BooleanGetMethodName")
@@ -506,10 +527,12 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * Returns whether the appender produces the HEADER part (that is, timestamp and
 	 * host name) of the syslog packet.
 	 *
+	 * @return {@code true} if the systlog header part is produced, else
+	 *         {@code false}
 	 * @since 1.2.15
 	 */
-	public final void setHeader(final boolean val) {
-		header = val;
+	public final void setHeader(final boolean header) {
+		this.header = header;
 	}
 
 	/**
@@ -630,6 +653,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 		}
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public String toString() {
 		return new StringBuilder("SyslogAppender64k [charset=") //
