@@ -514,8 +514,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * with existing behavior, however should be true unless there is a specific
 	 * justification.
 	 *
-	 * @param facilityPrinting {@code true} to produce the syslog header part,
-	 *                         {@code false} to exclude it.
+	 * @return {@code true} if the systlog header part is produced, else
+	 *         {@code false}
 	 * @since 1.2.15
 	 */
 	@SuppressWarnings("PMD.BooleanGetMethodName")
@@ -527,8 +527,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * Returns whether the appender produces the HEADER part (that is, timestamp and
 	 * host name) of the syslog packet.
 	 *
-	 * @return {@code true} if the systlog header part is produced, else
-	 *         {@code false}
+	 * @param header {@code true} to produce the syslog header part, {@code false}
+	 *               to exclude it.
 	 * @since 1.2.15
 	 */
 	public final void setHeader(final boolean header) {
