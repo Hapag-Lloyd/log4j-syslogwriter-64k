@@ -51,6 +51,21 @@
 		</dependency>
 	</dependencies>
 
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<artifactId>maven-dependency-plugin</artifactId>
+					<configuration>
+						<usedDependencies>
+							<usedDependency>org.junit.vintage:junit-vintage-engine</usedDependency>
+						</usedDependencies>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
 	<profiles>
 		<!-- JDK 15 and 16, Maven Javadoc Plugin: Logs warnings on missing JavaDoc comments inside generated code -->
 		<profile>
