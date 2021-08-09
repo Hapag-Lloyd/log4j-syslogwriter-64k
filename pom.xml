@@ -15,6 +15,13 @@
 
 	<name>log4jSyslogWriter64k</name>
 	<description>Writes logs up to 64k in Syslog</description>
+	<url>https://${parent-pom.github.organization}.github.io/${parent-pom.github.project}/</url>
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>https://opensource.org/licenses/MIT</url>
+		</license>
+	</licenses>
 
 	<properties>
 		<parent-pom.create-changelog-md>false</parent-pom.create-changelog-md>
