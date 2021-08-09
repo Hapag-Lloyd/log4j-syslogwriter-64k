@@ -9,7 +9,7 @@
 		<relativePath />
 	</parent>
 
-	<groupId>com.hlag</groupId>
+	<groupId>com.hlag.contribute</groupId>
 	<artifactId>log4jSyslogWriter64k</artifactId>
 	<version>1.1.1-SNAPSHOT</version>
 
