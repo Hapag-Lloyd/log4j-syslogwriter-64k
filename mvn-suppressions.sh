@@ -1,5 +1,6 @@
 function suppressSiteWarnings() {
 	cat < /dev/stdin \
+	| grep --invert-match --perl-regexp "^\\[WARNING\\] Unable to derive module descriptor for .*$"
 	| grep --invert-match --perl-regexp "^\\[WARNING\\] Unable to find a URL to the parent project\\. The parent menu will NOT be added\\.$"
 }
 
