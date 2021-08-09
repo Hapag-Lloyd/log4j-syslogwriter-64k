@@ -11,7 +11,7 @@
 
 	<groupId>com.hlag</groupId>
 	<artifactId>log4jSyslogWriter64k</artifactId>
-	<version>1.1.2-SNAPSHOT</version>
+	<version>1.1.1-SNAPSHOT</version>
 
 	<name>log4jSyslogWriter64k</name>
 	<description>Writes logs up to 64k in Syslog</description>
@@ -22,6 +22,13 @@
 			<url>https://opensource.org/licenses/MIT</url>
 		</license>
 	</licenses>
+
+	<developers>
+		<developer>
+			<name>Jayant Varshney</name>
+			<email>jayantvarshney018@gmail.com</email>
+		</developer>
+	</developers>
 
 	<properties>
 		<parent-pom.create-changelog-md>false</parent-pom.create-changelog-md>
