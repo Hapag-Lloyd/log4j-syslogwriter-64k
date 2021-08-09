@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SyslogTcpWriter64k.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">log4j Syslog Writer 64k</a> &gt; <a href="index.source.html" class="el_package">com.github.loggly.log4j.helpers</a> &gt; <span class="el_source">SyslogTcpWriter64k.java</span></div><h1>SyslogTcpWriter64k.java</h1><pre class="source lang-java linenums">package com.github.loggly.log4j.helpers;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.nio.charset.Charset;
+import java.util.Optional;
+
+import javax.net.SocketFactory;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+/**
+ * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that
+ * it behaves like a java.io.Writer.
+ */
+@SuppressFBWarnings(value = &quot;IMC_IMMATURE_CLASS_NO_TOSTRING&quot;,
+		justification = &quot;Instance fields cannot be stringified nicely, therefore toString does not make that much sense.&quot;)
+public class SyslogTcpWriter64k extends SyslogWriter64k {
+	private final Optional&lt;SocketFactory&gt; socketFactory;
+
+<span class="nc" id="L23">	private volatile Optional&lt;Socket&gt; socket = Optional.empty();</span>
+
+<span class="nc" id="L25">	private volatile Optional&lt;BufferedWriter&gt; writer = Optional.empty();</span>
+
+	public SyslogTcpWriter64k(final String syslogHost,
+			final Charset charset,
+			final Optional&lt;SocketFactory&gt; socketFactory) {
+<span class="nc" id="L30">		super(syslogHost, charset);</span>
+
+<span class="nc" id="L32">		this.socketFactory = socketFactory;</span>
+<span class="nc" id="L33">	}</span>
+
+	@Override
+	public void flush() throws IOException {
+<span class="nc" id="L37">		final Optional&lt;BufferedWriter&gt; writerToFlush = writer;</span>
+<span class="nc bnc" id="L38" title="All 2 branches missed.">		if (writerToFlush.isPresent()) {</span>
+<span class="nc" id="L39">			closeOnIOException(() -&gt; writerToFlush.get().flush());</span>
+		}
+<span class="nc" id="L41">	}</span>
+
+	@SuppressWarnings({ &quot;checkstyle:SuppressWarnings&quot;, &quot;resource&quot; })
+	@SuppressFBWarnings(value = &quot;UNENCRYPTED_SOCKET&quot;,
+			justification = &quot;Offering both: insecure TCP and TCP via custom SocketFactory&quot;)
+	private BufferedWriter getWriter() throws IOException {
+<span class="nc" id="L47">		synchronized (lock) {</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">			if (!writer.isPresent()) {</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">				final Socket socketToSet = socketFactory.isPresent()</span>
+<span class="nc" id="L50">						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())</span>
+<span class="nc" id="L51">						: new Socket(getSyslogHost(), getSyslogPort());</span>
+<span class="nc" id="L52">				socket = Optional.of(socketToSet);</span>
+
+<span class="nc" id="L54">				writer = Optional</span>
+<span class="nc" id="L55">						.of(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));</span>
+			}
+<span class="nc" id="L57">			return writer.get();</span>
+		}
+	}
+
+	@Override
+	public void write(final String string) throws IOException {
+		// compute syslog frame according to: https://tools.ietf.org/html/rfc6587
+<span class="nc" id="L64">		final String syslogFrame = String.format(&quot;%s %s&quot;, string.length(), string);</span>
+<span class="nc" id="L65">		closeOnIOException(() -&gt; getWriter().append(syslogFrame));</span>
+<span class="nc" id="L66">	}</span>
+
+	@Override
+	public void write(final char[] buf, final int off, final int len) throws IOException {
+<span class="nc" id="L70">		this.write(new String(buf, off, len));</span>
+<span class="nc" id="L71">	}</span>
+
+	@Override
+	@SuppressFBWarnings(value = &quot;AFBR_ABNORMAL_FINALLY_BLOCK_RETURN&quot;, justification = &quot;Shouldn't matter in this case.&quot;)
+	public void close() throws IOException {
+		final Optional&lt;BufferedWriter&gt; writerToClose;
+		final Optional&lt;Socket&gt; socketToClose;
+
+<span class="nc" id="L79">		synchronized (lock) {</span>
+<span class="nc" id="L80">			writerToClose = writer;</span>
+<span class="nc" id="L81">			writer = Optional.empty();</span>
+
+<span class="nc" id="L83">			socketToClose = socket;</span>
+<span class="nc" id="L84">			socket = Optional.empty();</span>
+<span class="nc" id="L85">		}</span>
+
+		try {
+<span class="nc bnc" id="L88" title="All 2 branches missed.">			if (writerToClose.isPresent()) {</span>
+<span class="nc" id="L89">				writerToClose.get().close();</span>
+			}
+		} finally {
+<span class="nc bnc" id="L92" title="All 2 branches missed.">			if (socketToClose.isPresent()) {</span>
+<span class="nc" id="L93">				socketToClose.get().close();</span>
+			}
+		}
+<span class="nc" id="L96">	}</span>
+
+	private void closeOnIOException(final IORunnable runnable) throws IOException {
+		try {
+<span class="nc" id="L100">			runnable.run();</span>
+<span class="nc" id="L101">		} catch (final IOException e) {</span>
+			try {
+<span class="nc" id="L103">				close();</span>
+<span class="nc" id="L104">			} catch (@SuppressWarnings(&quot;unused&quot;) final IOException ignored) {</span>
+				// ignore because it should not hide the original exception
+<span class="nc" id="L106">			}</span>
+<span class="nc" id="L107">			throw e;</span>
+<span class="nc" id="L108">		}</span>
+<span class="nc" id="L109">	}</span>
+
+	@FunctionalInterface
+	private interface IORunnable {
+		void run() throws IOException;
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

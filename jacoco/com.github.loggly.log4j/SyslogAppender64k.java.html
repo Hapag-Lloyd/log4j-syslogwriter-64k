@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SyslogAppender64k.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">log4j Syslog Writer 64k</a> &gt; <a href="index.source.html" class="el_package">com.github.loggly.log4j</a> &gt; <span class="el_source">SyslogAppender64k.java</span></div><h1>SyslogAppender64k.java</h1><pre class="source lang-java linenums">package com.github.loggly.log4j;
+
+import java.io.IOException;
+import java.io.Writer;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.TreeMap;
+
+import javax.net.SocketFactory;
+
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Layout;
+import org.apache.log4j.helpers.LogLog;
+import org.apache.log4j.helpers.SyslogQuietWriter;
+import org.apache.log4j.spi.LoggingEvent;
+
+import com.github.loggly.log4j.helpers.SyslogTcpWriter64k;
+import com.github.loggly.log4j.helpers.SyslogUdpWriter64k;
+
+import de.larssh.utils.Collectors;
+import de.larssh.utils.Finals;
+import de.larssh.utils.collection.Maps;
+import de.larssh.utils.text.Strings;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+/**
+ * Use SyslogAppender64k to send log messages upto 64K to a remote syslog
+ * daemon.
+ */
+@SuppressWarnings(&quot;PMD.GodClass&quot;)
+public class SyslogAppender64k extends AppenderSkeleton {
+	// The following constants are extracted from a syslog.h file
+	// copyrighted by the Regents of the University of California
+	// I hope nobody at Berkley gets offended.
+	/** Kernel messages */
+<span class="nc" id="L44">	public static final int LOG_KERN = Finals.constant(0);</span>
+
+	/** Random user-level messages */
+<span class="nc" id="L47">	public static final int LOG_USER = Finals.constant(1 &lt;&lt; 3);</span>
+
+	/** Mail system */
+<span class="nc" id="L50">	public static final int LOG_MAIL = Finals.constant(2 &lt;&lt; 3);</span>
+
+	/** System daemons */
+<span class="nc" id="L53">	public static final int LOG_DAEMON = Finals.constant(3 &lt;&lt; 3);</span>
+
+	/** security/authorization messages */
+<span class="nc" id="L56">	public static final int LOG_AUTH = Finals.constant(4 &lt;&lt; 3);</span>
+
+	/** messages generated internally by syslogd */
+<span class="nc" id="L59">	public static final int LOG_SYSLOG = Finals.constant(5 &lt;&lt; 3);</span>
+
+	/** line printer subsystem */
+<span class="nc" id="L62">	public static final int LOG_LPR = Finals.constant(6 &lt;&lt; 3);</span>
+
+	/** network news subsystem */
+<span class="nc" id="L65">	public static final int LOG_NEWS = Finals.constant(7 &lt;&lt; 3);</span>
+
+	/** UUCP subsystem */
+<span class="nc" id="L68">	public static final int LOG_UUCP = Finals.constant(8 &lt;&lt; 3);</span>
+
+	/** clock daemon */
+<span class="nc" id="L71">	public static final int LOG_CRON = Finals.constant(9 &lt;&lt; 3);</span>
+
+	/** security/authorization messages (private) */
+<span class="nc" id="L74">	public static final int LOG_AUTHPRIV = Finals.constant(10 &lt;&lt; 3);</span>
+
+	/** ftp daemon */
+<span class="nc" id="L77">	public static final int LOG_FTP = Finals.constant(11 &lt;&lt; 3);</span>
+
+	// other codes through 15 reserved for system use
+	/** reserved for local use */
+<span class="nc" id="L81">	public static final int LOG_LOCAL0 = Finals.constant(16 &lt;&lt; 3);</span>
+
+	/** reserved for local use */
+<span class="nc" id="L84">	public static final int LOG_LOCAL1 = Finals.constant(17 &lt;&lt; 3);</span>
+
+	/** reserved for local use */
+<span class="nc" id="L87">	public static final int LOG_LOCAL2 = Finals.constant(18 &lt;&lt; 3);</span>
+
+	/** reserved for local use */
+<span class="nc" id="L90">	public static final int LOG_LOCAL3 = Finals.constant(19 &lt;&lt; 3);</span>
+
+	/** reserved for local use */
+<span class="nc" id="L93">	public static final int LOG_LOCAL4 = Finals.constant(20 &lt;&lt; 3);</span>
+
+	/** reserved for local use */
+<span class="nc" id="L96">	public static final int LOG_LOCAL5 = Finals.constant(21 &lt;&lt; 3);</span>
+
+	/** reserved for local use */
+<span class="nc" id="L99">	public static final int LOG_LOCAL6 = Finals.constant(22 &lt;&lt; 3);</span>
+
+	/** reserved for local use */
+<span class="nc" id="L102">	public static final int LOG_LOCAL7 = Finals.constant(23 &lt;&lt; 3);</span>
+
+<span class="nc" id="L104">	protected static final int SYSLOG_HOST_OI = Finals.constant(0);</span>
+
+<span class="nc" id="L106">	protected static final int FACILITY_OI = Finals.constant(1);</span>
+
+	/**
+	 * Max lengths in bytes of a message. Per RFC 5424, size limits are dictated by
+	 * the syslog transport mapping in use. But, the practical upper limit of UDP
+	 * over IPV4 is 65507 (65535 − 8 byte UDP header − 20 byte IP header).
+	 */
+<span class="nc" id="L113">	protected static final int LOWER_MAX_MSG_LENGTH = Finals.constant(480);</span>
+
+<span class="nc" id="L115">	protected static final int UPPER_MAX_MSG_LENGTH = Finals.constant(65507);</span>
+
+	private static final String PROTOCOL_TCP = &quot;tcp&quot;;
+
+	private static final String PROTOCOL_UDP = &quot;udp&quot;;
+
+	private static final String DEFAULT_PROTOCOL = PROTOCOL_UDP;
+
+	private static final String ELLIPSIS = &quot;...&quot;;
+
+	private static final String TAB = &quot;    &quot;;
+
+	/**
+	 * Date format used if header = true.
+	 */
+<span class="nc" id="L130">	private static final ThreadLocal&lt;SimpleDateFormat&gt; DATE_FORMAT</span>
+<span class="nc" id="L131">			= ThreadLocal.withInitial(() -&gt; new SimpleDateFormat(&quot;MMM dd HH:mm:ss &quot;, Locale.ENGLISH));</span>
+
+	/**
+	 * Maps integer values to the corresponding syslog facility name.
+	 */
+<span class="nc" id="L136">	private static final Map&lt;Integer, String&gt; FACILITY_NAMES = Maps.&lt;Integer, String&gt;builder()</span>
+<span class="nc" id="L137">			.put(LOG_KERN, &quot;kern&quot;)</span>
+<span class="nc" id="L138">			.put(LOG_USER, &quot;user&quot;)</span>
+<span class="nc" id="L139">			.put(LOG_MAIL, &quot;mail&quot;)</span>
+<span class="nc" id="L140">			.put(LOG_DAEMON, &quot;daemon&quot;)</span>
+<span class="nc" id="L141">			.put(LOG_AUTH, &quot;auth&quot;)</span>
+<span class="nc" id="L142">			.put(LOG_SYSLOG, &quot;syslog&quot;)</span>
+<span class="nc" id="L143">			.put(LOG_LPR, &quot;lpr&quot;)</span>
+<span class="nc" id="L144">			.put(LOG_NEWS, &quot;news&quot;)</span>
+<span class="nc" id="L145">			.put(LOG_UUCP, &quot;uucp&quot;)</span>
+<span class="nc" id="L146">			.put(LOG_CRON, &quot;cron&quot;)</span>
+<span class="nc" id="L147">			.put(LOG_AUTHPRIV, &quot;authpriv&quot;)</span>
+<span class="nc" id="L148">			.put(LOG_FTP, &quot;ftp&quot;)</span>
+<span class="nc" id="L149">			.put(LOG_LOCAL0, &quot;local0&quot;)</span>
+<span class="nc" id="L150">			.put(LOG_LOCAL1, &quot;local1&quot;)</span>
+<span class="nc" id="L151">			.put(LOG_LOCAL2, &quot;local2&quot;)</span>
+<span class="nc" id="L152">			.put(LOG_LOCAL3, &quot;local3&quot;)</span>
+<span class="nc" id="L153">			.put(LOG_LOCAL4, &quot;local4&quot;)</span>
+<span class="nc" id="L154">			.put(LOG_LOCAL5, &quot;local5&quot;)</span>
+<span class="nc" id="L155">			.put(LOG_LOCAL6, &quot;local6&quot;)</span>
+<span class="nc" id="L156">			.put(LOG_LOCAL7, &quot;local7&quot;)</span>
+<span class="nc" id="L157">			.unmodifiable();</span>
+
+	/**
+	 * Maps the names syslog facility to the corresponding integer value. The
+	 * mapping is case-insensitive.
+	 */
+<span class="nc" id="L163">	private static final Map&lt;String, Integer&gt; FACILITY_VALUES = FACILITY_NAMES.entrySet()</span>
+<span class="nc" id="L164">			.stream()</span>
+<span class="nc" id="L165">			.collect(Collectors.toMap(Entry::getValue, //</span>
+					Entry::getKey,
+<span class="nc" id="L167">					() -&gt; new TreeMap&lt;&gt;(String.CASE_INSENSITIVE_ORDER)));</span>
+
+	/**
+	 * Returns the specified syslog facility as a lower-case String, e.g. &quot;kern&quot;,
+	 * &quot;user&quot;, etc.
+	 *
+	 * @param syslogFacility the integer value of a facility
+	 * @return the facility name of {@code syslogFacility}
+	 */
+	@SuppressFBWarnings(value = &quot;OPM_OVERLY_PERMISSIVE_METHOD&quot;, justification = &quot;Public API&quot;)
+	public static String getFacilityString(final int syslogFacility) {
+<span class="nc" id="L178">		return FACILITY_NAMES.get(syslogFacility);</span>
+	}
+
+	/**
+	 * Returns the integer value corresponding to the named syslog facility, or -1
+	 * if it couldn't be recognized.
+	 *
+	 * @param facilityName one of the strings KERN, USER, MAIL, DAEMON, AUTH,
+	 *                     SYSLOG, LPR, NEWS, UUCP, CRON, AUTHPRIV, FTP, LOCAL0,
+	 *                     LOCAL1, LOCAL2, LOCAL3, LOCAL4, LOCAL5, LOCAL6, LOCAL7.
+	 *                     The matching is case-insensitive.
+	 * @return the integer value corresponding to {@code factilityName}
+	 * @since 1.1
+	 */
+	@SuppressFBWarnings(value = &quot;OPM_OVERLY_PERMISSIVE_METHOD&quot;, justification = &quot;Public API&quot;)
+	public static int getFacility(final String facilityName) {
+<span class="nc" id="L194">		return Optional.ofNullable(facilityName).map(String::trim).map(FACILITY_VALUES::get).orElse(-1);</span>
+	}
+
+<span class="nc" id="L197">	private final Object lock = new Object();</span>
+
+<span class="nc" id="L199">	private Charset charset = StandardCharsets.UTF_8;</span>
+
+	// Have LOG_USER as default
+<span class="nc" id="L202">	private int syslogFacility = LOG_USER;</span>
+
+<span class="nc" id="L204">	private String facilityString = null;</span>
+
+<span class="nc" id="L206">	private boolean facilityPrinting = false;</span>
+
+<span class="nc" id="L208">	private Optional&lt;SyslogQuietWriter&gt; syslogQuietWriter = Optional.empty();</span>
+
+<span class="nc" id="L210">	private String syslogHost = null;</span>
+
+<span class="nc" id="L212">	private String protocol = DEFAULT_PROTOCOL;</span>
+
+<span class="nc" id="L214">	private Optional&lt;SocketFactory&gt; tcpSocketFactory = Optional.empty();</span>
+
+	/**
+	 * Max length in bytes of a message.
+	 */
+<span class="nc" id="L219">	private int maxMessageLength = UPPER_MAX_MSG_LENGTH;</span>
+
+	/**
+	 * If true, the appender will generate the HEADER (timestamp and host name) part
+	 * of the syslog packet.
+	 *
+	 * @since 1.2.15
+	 */
+<span class="nc" id="L227">	private boolean header = false;</span>
+
+	/**
+	 * Host name used to identify messages from this appender.
+	 *
+	 * @since 1.2.15
+	 */
+	private String localHostname;
+
+	/**
+	 * Set to true after the header of the layout has been sent or if it has none.
+	 */
+<span class="nc" id="L239">	private boolean layoutHeaderChecked = false;</span>
+
+<span class="nc" id="L241">	public SyslogAppender64k() {</span>
+<span class="nc" id="L242">		this.initSyslogFacilityStr();</span>
+<span class="nc" id="L243">	}</span>
+
+	@SuppressFBWarnings(value = &quot;OPM_OVERLY_PERMISSIVE_METHOD&quot;, justification = &quot;Public API&quot;)
+<span class="nc" id="L246">	public SyslogAppender64k(final Layout layout, final int syslogFacility) {</span>
+<span class="nc" id="L247">		this.layout = layout;</span>
+<span class="nc" id="L248">		this.syslogFacility = syslogFacility;</span>
+<span class="nc" id="L249">		this.initSyslogFacilityStr();</span>
+<span class="nc" id="L250">	}</span>
+
+	public SyslogAppender64k(final Layout layout, final String syslogHost, final int syslogFacility) {
+<span class="nc" id="L253">		this(layout, syslogFacility);</span>
+<span class="nc" id="L254">		setSyslogHost(syslogHost);</span>
+<span class="nc" id="L255">	}</span>
+
+	/**
+	 * Release any resources held by this SyslogAppender64k.
+	 *
+	 * @since 0.8.4
+	 */
+	@Override
+	public void close() {
+<span class="nc" id="L264">		closed = true;</span>
+
+<span class="nc" id="L266">		synchronized (lock) {</span>
+<span class="nc" id="L267">			syslogQuietWriter.ifPresent(syslogWriter -&gt; {</span>
+<span class="nc" id="L268">				try (Writer writerToClose = syslogWriter) {</span>
+<span class="nc bnc" id="L269" title="All 6 branches missed.">					if (layoutHeaderChecked &amp;&amp; layout != null &amp;&amp; layout.getFooter() != null) {</span>
+<span class="nc" id="L270">						sendLayoutMessage(layout.getFooter());</span>
+					}
+<span class="nc" id="L272">				} catch (@SuppressWarnings(&quot;unused&quot;) final IOException ignored) {</span>
+					// ignore
+				} finally {
+<span class="nc" id="L275">					syslogQuietWriter = Optional.empty();</span>
+				}
+<span class="nc" id="L277">			});</span>
+<span class="nc" id="L278">		}</span>
+<span class="nc" id="L279">	}</span>
+
+	@SuppressWarnings(&quot;PMD.GuardLogStatement&quot;)
+	private void initSyslogFacilityStr() {
+<span class="nc" id="L283">		facilityString = getFacilityString(this.syslogFacility);</span>
+
+<span class="nc bnc" id="L285" title="All 2 branches missed.">		if (facilityString == null) {</span>
+<span class="nc" id="L286">			LogLog.warn(&quot;\&quot;&quot; + syslogFacility + &quot;\&quot; is an unknown syslog facility. Defaulting to \&quot;USER\&quot;.&quot;);</span>
+<span class="nc" id="L287">			this.syslogFacility = LOG_USER;</span>
+<span class="nc" id="L288">			facilityString = &quot;user:&quot;;</span>
+		} else {
+<span class="nc" id="L290">			facilityString += &quot;:&quot;;</span>
+		}
+<span class="nc" id="L292">	}</span>
+
+	/** {@inheritDoc} */
+	@Override
+	@SuppressWarnings({ &quot;PMD.CloseResource&quot;, &quot;PMD.GuardLogStatement&quot; })
+	public void append(final LoggingEvent event) {
+<span class="nc bnc" id="L298" title="All 2 branches missed.">		if (!isAsSevereAsThreshold(event.getLevel())) {</span>
+<span class="nc" id="L299">			return;</span>
+		}
+
+<span class="nc" id="L302">		synchronized (lock) {</span>
+<span class="nc bnc" id="L303" title="All 2 branches missed.">			if (!syslogQuietWriter.isPresent()) {</span>
+<span class="nc" id="L304">				errorHandler.error(&quot;No syslog host is set for SyslogAppender named \&quot;&quot; + this.name + &quot;\&quot;.&quot;);</span>
+<span class="nc" id="L305">				return;</span>
+			}
+<span class="nc" id="L307">			final SyslogQuietWriter syslogWriter = syslogQuietWriter.get();</span>
+
+<span class="nc bnc" id="L309" title="All 2 branches missed.">			if (!layoutHeaderChecked) {</span>
+<span class="nc bnc" id="L310" title="All 4 branches missed.">				if (layout != null &amp;&amp; layout.getHeader() != null) {</span>
+<span class="nc" id="L311">					sendLayoutMessage(layout.getHeader());</span>
+				}
+<span class="nc" id="L313">				layoutHeaderChecked = true;</span>
+			}
+
+<span class="nc" id="L316">			final String packetHeader = getPacketHeader(event.timeStamp);</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">			final String message = layout == null ? String.valueOf(event.getMessage()) : layout.format(event);</span>
+<span class="nc" id="L318">			final String packet = createPacket(packetHeader, message);</span>
+
+<span class="nc" id="L320">			syslogWriter.setLevel(event.getLevel().getSyslogEquivalent());</span>
+<span class="nc" id="L321">			sendPackets(packetHeader, packet);</span>
+
+<span class="nc bnc" id="L323" title="All 4 branches missed.">			if (layout == null || layout.ignoresThrowable()) {</span>
+<span class="nc" id="L324">				sendThrowable(packetHeader, event);</span>
+			}
+
+<span class="nc" id="L327">			syslogWriter.flush();</span>
+<span class="nc" id="L328">		}</span>
+<span class="nc" id="L329">	}</span>
+
+	/**
+	 * This method returns immediately as options are activated when they are set.
+	 */
+	@Override
+	public void activateOptions() {
+<span class="nc bnc" id="L336" title="All 2 branches missed.">		if (header) {</span>
+			// Initialize local host name
+<span class="nc" id="L338">			getLocalHostname();</span>
+		}
+<span class="nc bnc" id="L340" title="All 4 branches missed.">		if (layout != null &amp;&amp; layout.getHeader() != null) {</span>
+<span class="nc" id="L341">			synchronized (lock) {</span>
+<span class="nc" id="L342">				sendLayoutMessage(layout.getHeader());</span>
+<span class="nc" id="L343">			}</span>
+		}
+<span class="nc" id="L345">		layoutHeaderChecked = true;</span>
+<span class="nc" id="L346">	}</span>
+
+	/**
+	 * The SyslogAppender64k requires a layout. Hence, this method returns
+	 * &lt;code&gt;true&lt;/code&gt;.
+	 *
+	 * @since 0.8.4
+	 */
+	@Override
+	public boolean requiresLayout() {
+<span class="nc" id="L356">		return true;</span>
+	}
+
+	private String createPacket(final String packetHeader, final String message) {
+<span class="nc bnc" id="L360" title="All 4 branches missed.">		if (!facilityPrinting &amp;&amp; packetHeader.isEmpty()) {</span>
+<span class="nc" id="L361">			return message;</span>
+		}
+
+<span class="nc" id="L364">		final StringBuilder builder = new StringBuilder(packetHeader);</span>
+<span class="nc bnc" id="L365" title="All 2 branches missed.">		if (facilityPrinting) {</span>
+<span class="nc" id="L366">			builder.append(facilityString);</span>
+		}
+<span class="nc" id="L368">		builder.append(message);</span>
+<span class="nc" id="L369">		return builder.toString();</span>
+	}
+
+	@SuppressWarnings(&quot;PMD.CloseResource&quot;)
+	private void createSyslogWriter() {
+<span class="nc" id="L374">		syslogQuietWriter.ifPresent(syslogWriter -&gt; {</span>
+			try {
+<span class="nc" id="L376">				syslogWriter.close();</span>
+<span class="nc" id="L377">			} catch (@SuppressWarnings(&quot;unused&quot;) final IOException ignored) {</span>
+				// ignore
+<span class="nc" id="L379">			}</span>
+<span class="nc" id="L380">		});</span>
+
+<span class="nc bnc" id="L382" title="All 3 branches missed.">		switch (protocol) {</span>
+		case PROTOCOL_UDP:
+<span class="nc" id="L384">			this.syslogQuietWriter = Optional.of(</span>
+					new SyslogQuietWriter(new SyslogUdpWriter64k(syslogHost, charset), syslogFacility, errorHandler));
+<span class="nc" id="L386">			break;</span>
+		case PROTOCOL_TCP:
+<span class="nc" id="L388">			this.syslogQuietWriter</span>
+<span class="nc" id="L389">					= Optional.of(new SyslogQuietWriter(new SyslogTcpWriter64k(syslogHost, charset, tcpSocketFactory),</span>
+							syslogFacility,
+							errorHandler));
+<span class="nc" id="L392">			break;</span>
+		default:
+<span class="nc" id="L394">			throw new IllegalArgumentException(String.format(&quot;Unexpected protocol: %s&quot;, protocol));</span>
+		}
+<span class="nc" id="L396">	}</span>
+
+	/**
+	 * Returns the value of the &lt;b&gt;SyslogHost&lt;/b&gt; option.
+	 *
+	 * @return syslogHost the syslog host, optionally including a port. Might be
+	 *         {@code null} if not initialized.
+	 */
+	public String getSyslogHost() {
+<span class="nc" id="L405">		return syslogHost;</span>
+	}
+
+	/**
+	 * The &lt;b&gt;SyslogHost&lt;/b&gt; option is the name of the the syslog host where log
+	 * output should go. A non-default port can be specified by appending a colon
+	 * and port number to a host name, an IPv4 address or an IPv6 address enclosed
+	 * in square brackets. &lt;b&gt;WARNING&lt;/b&gt; If the SyslogHost is not set, then this
+	 * appender will fail.
+	 *
+	 * @param syslogHost the syslog host, optionally including a port
+	 */
+	public final void setSyslogHost(final String syslogHost) {
+<span class="nc" id="L418">		this.syslogHost = syslogHost;</span>
+<span class="nc" id="L419">		createSyslogWriter();</span>
+<span class="nc" id="L420">	}</span>
+
+	public String getProtocol() {
+<span class="nc" id="L423">		return protocol;</span>
+	}
+
+	public void setProtocol(final String protocol) {
+<span class="nc bnc" id="L427" title="All 2 branches missed.">		final String protocolToSet = protocol == null ? DEFAULT_PROTOCOL : Strings.toNeutralLowerCase(protocol);</span>
+<span class="nc bnc" id="L428" title="All 2 branches missed.">		switch (protocolToSet) {</span>
+		case PROTOCOL_UDP:
+		case PROTOCOL_TCP:
+<span class="nc" id="L431">			this.protocol = protocol;</span>
+<span class="nc" id="L432">			break;</span>
+		default:
+<span class="nc" id="L434">			throw new IllegalArgumentException(String.format(&quot;Invalid protocol: %s&quot;, protocol));</span>
+		}
+<span class="nc" id="L436">		createSyslogWriter();</span>
+<span class="nc" id="L437">	}</span>
+
+	public Charset getCharset() {
+<span class="nc" id="L440">		return charset;</span>
+	}
+
+	public void setCharset(final Charset charset) {
+<span class="nc" id="L444">		this.charset = charset;</span>
+<span class="nc" id="L445">	}</span>
+
+	/**
+	 * Set the syslog facility. This is the &lt;b&gt;Facility&lt;/b&gt; option.
+	 *
+	 * &lt;p&gt;
+	 * The &lt;code&gt;facilityName&lt;/code&gt; parameter must be one of the strings KERN,
+	 * USER, MAIL, DAEMON, AUTH, SYSLOG, LPR, NEWS, UUCP, CRON, AUTHPRIV, FTP,
+	 * LOCAL0, LOCAL1, LOCAL2, LOCAL3, LOCAL4, LOCAL5, LOCAL6, LOCAL7. Case is
+	 * unimportant.
+	 *
+	 * @param facilityName the facility name
+	 * @since 0.8.1
+	 */
+	@SuppressWarnings(&quot;PMD.GuardLogStatement&quot;)
+	public void setFacility(final String facilityName) {
+<span class="nc bnc" id="L461" title="All 2 branches missed.">		if (facilityName == null) {</span>
+<span class="nc" id="L462">			return;</span>
+		}
+
+<span class="nc" id="L465">		syslogFacility = getFacility(facilityName);</span>
+<span class="nc bnc" id="L466" title="All 2 branches missed.">		if (syslogFacility == -1) {</span>
+<span class="nc" id="L467">			LogLog.warn(&quot;[&quot; + facilityName + &quot;] is an unknown syslog facility. Defaulting to [USER].&quot;);</span>
+<span class="nc" id="L468">			syslogFacility = LOG_USER;</span>
+		}
+
+<span class="nc" id="L471">		this.initSyslogFacilityStr();</span>
+
+		// If there is already a syslogQuietWriter, make it use the new facility.
+<span class="nc" id="L474">		syslogQuietWriter.ifPresent(syslogWriter -&gt; syslogWriter.setSyslogFacility(this.syslogFacility));</span>
+<span class="nc" id="L475">	}</span>
+
+	/**
+	 * Returns the value of the &lt;b&gt;Facility&lt;/b&gt; option.
+	 *
+	 * @return the facility name
+	 */
+	@SuppressWarnings(&quot;checkstyle:OverloadMethodsDeclarationOrder&quot;)
+	@SuppressFBWarnings(value = &quot;MOM_MISLEADING_OVERLOAD_MODEL&quot;, justification = &quot;Existing model&quot;)
+	public String getFacility() {
+<span class="nc" id="L485">		return getFacilityString(syslogFacility);</span>
+	}
+
+	/**
+	 * If the &lt;b&gt;FacilityPrinting&lt;/b&gt; option is set to true, the printed message
+	 * will include the facility name of the application. It is &lt;em&gt;false&lt;/em&gt; by
+	 * default.
+	 *
+	 * @param facilityPrinting {@code true} to include the facility name of the
+	 *                         application, {@code false} to exclude it.
+	 */
+	public void setFacilityPrinting(final boolean facilityPrinting) {
+<span class="nc" id="L497">		this.facilityPrinting = facilityPrinting;</span>
+<span class="nc" id="L498">	}</span>
+
+	/**
+	 * Returns the value of the &lt;b&gt;FacilityPrinting&lt;/b&gt; option.
+	 *
+	 * @return {@code true} if the facility name of the application is included,
+	 *         else {@code false}
+	 */
+	@SuppressWarnings(&quot;PMD.BooleanGetMethodName&quot;)
+	public boolean getFacilityPrinting() {
+<span class="nc" id="L508">		return facilityPrinting;</span>
+	}
+
+	/**
+	 * If true, the appender will generate the HEADER part (that is, timestamp and
+	 * host name) of the syslog packet. Default value is false for compatibility
+	 * with existing behavior, however should be true unless there is a specific
+	 * justification.
+	 *
+	 * @return {@code true} if the systlog header part is produced, else
+	 *         {@code false}
+	 * @since 1.2.15
+	 */
+	@SuppressWarnings(&quot;PMD.BooleanGetMethodName&quot;)
+	public final boolean getHeader() {
+<span class="nc" id="L523">		return header;</span>
+	}
+
+	/**
+	 * Returns whether the appender produces the HEADER part (that is, timestamp and
+	 * host name) of the syslog packet.
+	 *
+	 * @param header {@code true} to produce the syslog header part, {@code false}
+	 *               to exclude it.
+	 * @since 1.2.15
+	 */
+	public final void setHeader(final boolean header) {
+<span class="nc" id="L535">		this.header = header;</span>
+<span class="nc" id="L536">	}</span>
+
+	/**
+	 * Returns the max message length in bytes.
+	 *
+	 * @return The max message length in bytes.
+	 */
+	public int getMaxMessageLength() {
+<span class="nc" id="L544">		return maxMessageLength;</span>
+	}
+
+	/**
+	 * Sets the max message length in bytes.
+	 *
+	 * @param maxMessageLength The max message length in bytes.
+	 */
+	@SuppressWarnings(&quot;PMD.GuardLogStatement&quot;)
+	public void setMaxMessageLength(final int maxMessageLength) {
+<span class="nc bnc" id="L554" title="All 4 branches missed.">		if (maxMessageLength &gt;= LOWER_MAX_MSG_LENGTH &amp;&amp; maxMessageLength &lt;= UPPER_MAX_MSG_LENGTH) {</span>
+<span class="nc" id="L555">			this.maxMessageLength = maxMessageLength;</span>
+		} else {
+<span class="nc" id="L557">			this.maxMessageLength = UPPER_MAX_MSG_LENGTH;</span>
+<span class="nc" id="L558">			LogLog.warn(</span>
+					maxMessageLength + &quot; is an invalid message length. Defaulting to &quot; + UPPER_MAX_MSG_LENGTH + &quot;.&quot;);
+		}
+<span class="nc" id="L561">	}</span>
+
+	public Optional&lt;SocketFactory&gt; getTcpSocketFactory() {
+<span class="nc" id="L564">		return tcpSocketFactory;</span>
+	}
+
+	public void setTcpSocketFactory(final SocketFactory tcpSocketFactory) {
+<span class="nc" id="L568">		this.tcpSocketFactory = Optional.ofNullable(tcpSocketFactory);</span>
+<span class="nc" id="L569">	}</span>
+
+	/**
+	 * Get the host name used to identify this appender.
+	 *
+	 * @return local host name
+	 * @since 1.2.15
+	 */
+	@SuppressFBWarnings(value = &quot;MDM_INETADDRESS_GETLOCALHOST&quot;,
+			justification = &quot;Calling InetAddress.getLocalHost() by intention.&quot;)
+	private String getLocalHostname() {
+<span class="nc bnc" id="L580" title="All 2 branches missed.">		if (localHostname == null) {</span>
+			try {
+<span class="nc" id="L582">				localHostname = InetAddress.getLocalHost().getHostName();</span>
+<span class="nc" id="L583">			} catch (@SuppressWarnings(&quot;unused&quot;) final UnknownHostException ignore) {</span>
+<span class="nc" id="L584">				localHostname = &quot;UNKNOWN_HOST&quot;;</span>
+<span class="nc" id="L585">			}</span>
+		}
+<span class="nc" id="L587">		return localHostname;</span>
+	}
+
+	/**
+	 * Gets HEADER portion of packet.
+	 *
+	 * @param timeStamp number of milliseconds after the standard base time.
+	 * @return HEADER portion of packet, will be zero-length string if header is
+	 *         false.
+	 * @since 1.2.15
+	 */
+	@SuppressWarnings(&quot;PMD.AvoidLiteralsInIfCondition&quot;)
+	private String getPacketHeader(final long timeStamp) {
+<span class="nc bnc" id="L600" title="All 2 branches missed.">		if (!header) {</span>
+<span class="nc" id="L601">			return &quot;&quot;;</span>
+		}
+
+<span class="nc" id="L604">		final StringBuilder builder = new StringBuilder(DATE_FORMAT.get().format(new Date(timeStamp)));</span>
+		// RFC 3164 says leading space, not leading zero on days 1-9
+<span class="nc bnc" id="L606" title="All 2 branches missed.">		if (builder.charAt(4) == '0') {</span>
+<span class="nc" id="L607">			builder.setCharAt(4, ' ');</span>
+		}
+<span class="nc" id="L609">		builder.append(getLocalHostname());</span>
+<span class="nc" id="L610">		builder.append(' ');</span>
+<span class="nc" id="L611">		return builder.toString();</span>
+	}
+
+	/**
+	 * Set header or footer of layout.
+	 *
+	 * @param msg message body, may not be null.
+	 */
+	private void sendLayoutMessage(final String message) {
+<span class="nc" id="L620">		syslogQuietWriter.ifPresent(syslogWriter -&gt; {</span>
+<span class="nc" id="L621">			final String packet = createPacket(getPacketHeader(new Date().getTime()), message);</span>
+<span class="nc" id="L622">			syslogWriter.setLevel(6);</span>
+<span class="nc" id="L623">			syslogWriter.write(packet);</span>
+<span class="nc" id="L624">		});</span>
+<span class="nc" id="L625">	}</span>
+
+	@SuppressWarnings({ &quot;checkstyle:SuppressWarnings&quot;, &quot;resource&quot; })
+	private void sendPackets(final String header, final String packet) {
+<span class="nc" id="L629">		final int byteCount = packet.getBytes(charset).length;</span>
+
+		// If packet is less than limit, then write it.
+		// Else, write in chunks.
+<span class="nc bnc" id="L633" title="All 2 branches missed.">		if (byteCount &lt;= maxMessageLength) {</span>
+<span class="nc" id="L634">			syslogQuietWriter.get().write(packet);</span>
+		} else {
+<span class="nc" id="L636">			final int split = header.length() / 2 + packet.length() / 2;</span>
+<span class="nc" id="L637">			sendPackets(header, packet.substring(0, split) + ELLIPSIS);</span>
+<span class="nc" id="L638">			sendPackets(header, header + ELLIPSIS + packet.substring(split));</span>
+		}
+<span class="nc" id="L640">	}</span>
+
+	@SuppressWarnings({ &quot;checkstyle:SuppressWarnings&quot;, &quot;resource&quot; })
+	private void sendThrowable(final String packetHeader, final LoggingEvent event) {
+<span class="nc" id="L644">		final String[] lines = event.getThrowableStrRep();</span>
+<span class="nc bnc" id="L645" title="All 2 branches missed.">		if (lines != null) {</span>
+<span class="nc bnc" id="L646" title="All 2 branches missed.">			for (final String line : lines) {</span>
+<span class="nc bnc" id="L647" title="All 2 branches missed.">				if (line.startsWith(&quot;\t&quot;)) {</span>
+<span class="nc" id="L648">					syslogQuietWriter.get().write(packetHeader + TAB + line.substring(1));</span>
+				} else {
+<span class="nc" id="L650">					syslogQuietWriter.get().write(packetHeader + line);</span>
+				}
+			}
+		}
+<span class="nc" id="L654">	}</span>
+
+	/** {@inheritDoc} */
+	@Override
+	public String toString() {
+<span class="nc" id="L659">		return new StringBuilder(&quot;SyslogAppender64k [charset=&quot;) //</span>
+<span class="nc" id="L660">				.append(charset)</span>
+<span class="nc" id="L661">				.append(&quot;, syslogFacility=&quot;)</span>
+<span class="nc" id="L662">				.append(syslogFacility)</span>
+<span class="nc" id="L663">				.append(&quot;, facilityString=&quot;)</span>
+<span class="nc" id="L664">				.append(facilityString)</span>
+<span class="nc" id="L665">				.append(&quot;, facilityPrinting=&quot;)</span>
+<span class="nc" id="L666">				.append(facilityPrinting)</span>
+<span class="nc" id="L667">				.append(&quot;, syslogHost=&quot;)</span>
+<span class="nc" id="L668">				.append(syslogHost)</span>
+<span class="nc" id="L669">				.append(&quot;, protocol=&quot;)</span>
+<span class="nc" id="L670">				.append(protocol)</span>
+<span class="nc" id="L671">				.append(&quot;, maxMessageLength=&quot;)</span>
+<span class="nc" id="L672">				.append(maxMessageLength)</span>
+<span class="nc" id="L673">				.append(&quot;, header=&quot;)</span>
+<span class="nc" id="L674">				.append(header)</span>
+<span class="nc" id="L675">				.append(&quot;, localHostname=&quot;)</span>
+<span class="nc" id="L676">				.append(localHostname)</span>
+<span class="nc" id="L677">				.append(&quot;, layoutHeaderChecked=&quot;)</span>
+<span class="nc" id="L678">				.append(layoutHeaderChecked)</span>
+<span class="nc" id="L679">				.append(']')</span>
+<span class="nc" id="L680">				.toString();</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>
