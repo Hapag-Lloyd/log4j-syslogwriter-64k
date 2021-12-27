@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>de.lars-sh</groupId>
 		<artifactId>parent</artifactId>
-		<version>0.9.12</version>
+		<version>0.9.13</version>
 		<relativePath />
 	</parent>
 
@@ -71,7 +71,7 @@
 				<plugin>
 					<artifactId>maven-dependency-plugin</artifactId>
 					<configuration>
-						<usedDependencies>
+						<usedDependencies combine.children="append">
 							<usedDependency>org.junit.vintage:junit-vintage-engine</usedDependency>
 						</usedDependencies>
 					</configuration>

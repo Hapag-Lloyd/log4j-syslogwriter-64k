@@ -279,6 +279,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	}
 
 	@SuppressWarnings("PMD.GuardLogStatement")
+	@SuppressFBWarnings(value = "STT_TOSTRING_STORED_IN_FIELD", justification = "appending character just as required")
 	private void initSyslogFacilityStr() {
 		facilityString = getFacilityString(this.syslogFacility);
 
@@ -287,7 +288,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 			this.syslogFacility = LOG_USER;
 			facilityString = "user:";
 		} else {
-			facilityString += ":";
+			facilityString += ':';
 		}
 	}
 
@@ -424,7 +425,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	}
 
 	public void setProtocol(final String protocol) {
-		final String protocolToSet = protocol == null ? DEFAULT_PROTOCOL : Strings.toNeutralLowerCase(protocol);
+		final String protocolToSet = protocol == null ? DEFAULT_PROTOCOL : Strings.toLowerCaseNeutral(protocol);
 		switch (protocolToSet) {
 		case PROTOCOL_UDP:
 		case PROTOCOL_TCP:
