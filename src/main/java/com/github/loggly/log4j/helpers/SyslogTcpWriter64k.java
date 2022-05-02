@@ -6,25 +6,27 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.SocketFactory;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
- * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that
- * it behaves like a java.io.Writer.
+ * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that it behaves like a java.io.Writer.
  */
 @SuppressFBWarnings(value = "IMC_IMMATURE_CLASS_NO_TOSTRING",
 		justification = "Instance fields cannot be stringified nicely, therefore toString does not make that much sense.")
 public class SyslogTcpWriter64k extends SyslogWriter64k {
+
 	private final Optional<SocketFactory> socketFactory;
 
-	private volatile Optional<Socket> socket = Optional.empty();
+	private AtomicReference<Socket> socket = null;
 
-	private volatile Optional<BufferedWriter> writer = Optional.empty();
+	private AtomicReference<BufferedWriter> writer = null;
 
-	public SyslogTcpWriter64k(final String syslogHost,
+	public SyslogTcpWriter64k(
+			final String syslogHost,
 			final Charset charset,
 			final Optional<SocketFactory> socketFactory) {
 		super(syslogHost, charset);
@@ -34,9 +36,9 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	@Override
 	public void flush() throws IOException {
-		final Optional<BufferedWriter> writerToFlush = writer;
-		if (writerToFlush.isPresent()) {
-			closeOnIOException(() -> writerToFlush.get().flush());
+		final BufferedWriter writerToFlush = writer.get();
+		if (writerToFlush != null) {
+			closeOnIOException(writerToFlush::flush);
 		}
 	}
 
@@ -45,14 +47,13 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 			justification = "Offering both: insecure TCP and TCP via custom SocketFactory")
 	private BufferedWriter getWriter() throws IOException {
 		synchronized (lock) {
-			if (!writer.isPresent()) {
+			if (writer.get() == null) {
 				final Socket socketToSet = socketFactory.isPresent()
 						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())
 						: new Socket(getSyslogHost(), getSyslogPort());
-				socket = Optional.of(socketToSet);
+				socket.set(socketToSet);
 
-				writer = Optional
-						.of(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));
+				writer.set(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));
 			}
 			return writer.get();
 		}
@@ -73,24 +74,24 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	@Override
 	@SuppressFBWarnings(value = "AFBR_ABNORMAL_FINALLY_BLOCK_RETURN", justification = "Shouldn't matter in this case.")
 	public void close() throws IOException {
-		final Optional<BufferedWriter> writerToClose;
-		final Optional<Socket> socketToClose;
+		final BufferedWriter writerToClose;
+		final Socket socketToClose;
 
 		synchronized (lock) {
-			writerToClose = writer;
-			writer = Optional.empty();
+			writerToClose = writer.get();
+			writer.set(null);
 
-			socketToClose = socket;
-			socket = Optional.empty();
+			socketToClose = socket.get();
+			socket.set(null);
 		}
 
 		try {
-			if (writerToClose.isPresent()) {
-				writerToClose.get().close();
+			if (writerToClose != null) {
+				writerToClose.close();
 			}
 		} finally {
-			if (socketToClose.isPresent()) {
-				socketToClose.get().close();
+			if (socketToClose != null) {
+				socketToClose.close();
 			}
 		}
 	}
@@ -110,6 +111,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	@FunctionalInterface
 	private interface IORunnable {
+
 		void run() throws IOException;
 	}
 }
