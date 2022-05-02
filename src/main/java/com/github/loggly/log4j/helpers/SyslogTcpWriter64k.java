@@ -25,9 +25,9 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	private final Optional<Duration> socketTimeout;
 
-	private AtomicReference<Socket> socket = null;
+	private final AtomicReference<Socket> socket = new AtomicReference<>(null);
 
-	private AtomicReference<BufferedWriter> writer = null;
+	private final AtomicReference<BufferedWriter> writer = new AtomicReference<>(null);
 
 	public SyslogTcpWriter64k(final String syslogHost,
 			final Charset charset,
@@ -40,6 +40,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	}
 
 	@Override
+	@SuppressWarnings({ "checkstyle:SuppressWarnings", "PMD.CloseResource", "resource" })
 	public void flush() throws IOException {
 		final BufferedWriter writerToFlush = writer.get();
 		if (writerToFlush != null) {
@@ -48,8 +49,8 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	}
 
 	@SuppressWarnings({ "checkstyle:SuppressWarnings", "resource" })
-	@SuppressFBWarnings(value = "UNENCRYPTED_SOCKET",
-			justification = "Offering both: insecure TCP and TCP via custom SocketFactory")
+	@SuppressFBWarnings(value = { "OI_OPTIONAL_ISSUES_USES_IMMEDIATE_EXECUTION", "UNENCRYPTED_SOCKET" },
+			justification = "false-positive, as '0' is constant; Offering both: insecure TCP and secure TCP via custom SocketFactory")
 	private BufferedWriter getWriter() throws IOException {
 		synchronized (lock) {
 			if (writer.get() == null) {
@@ -81,24 +82,13 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	@Override
 	@SuppressFBWarnings(value = "AFBR_ABNORMAL_FINALLY_BLOCK_RETURN", justification = "Shouldn't matter in this case.")
 	public void close() throws IOException {
-		final BufferedWriter writerToClose;
-		final Socket socketToClose;
-
 		synchronized (lock) {
-			writerToClose = writer.get();
-			writer.set(null);
-
-			socketToClose = socket.get();
-			socket.set(null);
-		}
-
-		try {
-			if (writerToClose != null) {
-				writerToClose.close();
-			}
-		} finally {
-			if (socketToClose != null) {
-				socketToClose.close();
+			try (Socket socketToClose = socket.get();
+					BufferedWriter writerToClose = writer.get()) {
+				// nothing
+			} finally {
+				writer.set(null);
+				socket.set(null);
 			}
 		}
 	}
@@ -110,7 +100,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 			try {
 				close();
 			} catch (@SuppressWarnings("unused") final IOException ignored) {
-				// ignore because it should not hide the original exception
+				// ignore because it shall not hide the original exception
 			}
 			throw e;
 		}
