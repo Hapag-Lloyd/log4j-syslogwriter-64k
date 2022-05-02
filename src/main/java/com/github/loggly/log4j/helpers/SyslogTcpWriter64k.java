@@ -15,12 +15,12 @@ import javax.net.SocketFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
- * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that it behaves like a java.io.Writer.
+ * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that
+ * it behaves like a java.io.Writer.
  */
 @SuppressFBWarnings(value = "IMC_IMMATURE_CLASS_NO_TOSTRING",
 		justification = "Instance fields cannot be stringified nicely, therefore toString does not make that much sense.")
 public class SyslogTcpWriter64k extends SyslogWriter64k {
-
 	private final Optional<SocketFactory> socketFactory;
 
 	private final Optional<Duration> socketTimeout;
@@ -29,8 +29,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	private AtomicReference<BufferedWriter> writer = null;
 
-	public SyslogTcpWriter64k(
-			final String syslogHost,
+	public SyslogTcpWriter64k(final String syslogHost,
 			final Charset charset,
 			final Optional<SocketFactory> socketFactory,
 			final Optional<Duration> socketTimeout) {
@@ -57,7 +56,8 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 				final Socket socketToSet = socketFactory.isPresent()
 						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())
 						: new Socket(getSyslogHost(), getSyslogPort());
-				socketToSet.setSoTimeout(socketTimeout.map(duration -> (int) duration.get(ChronoUnit.MILLIS)).orElse(0));
+				socketToSet
+						.setSoTimeout(socketTimeout.map(duration -> (int) duration.get(ChronoUnit.MILLIS)).orElse(0));
 				socket.set(socketToSet);
 
 				writer.set(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));
@@ -118,7 +118,6 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	@FunctionalInterface
 	private interface IORunnable {
-
 		void run() throws IOException;
 	}
 }

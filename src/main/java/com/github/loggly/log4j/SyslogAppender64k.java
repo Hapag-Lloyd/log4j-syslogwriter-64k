@@ -389,12 +389,10 @@ public class SyslogAppender64k extends AppenderSkeleton {
 					new SyslogQuietWriter(new SyslogUdpWriter64k(syslogHost, charset), syslogFacility, errorHandler));
 			break;
 		case PROTOCOL_TCP:
-			this.syslogQuietWriter
-					= Optional.of(
-							new SyslogQuietWriter(
-									new SyslogTcpWriter64k(syslogHost, charset, tcpSocketFactory, tcpSocketTimeout),
-							syslogFacility,
-							errorHandler));
+			this.syslogQuietWriter = Optional.of(new SyslogQuietWriter(
+					new SyslogTcpWriter64k(syslogHost, charset, tcpSocketFactory, tcpSocketTimeout),
+					syslogFacility,
+					errorHandler));
 			break;
 		default:
 			throw new IllegalArgumentException(String.format("Unexpected protocol: %s", protocol));
