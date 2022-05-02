@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
@@ -213,6 +214,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	private Optional<SocketFactory> tcpSocketFactory = Optional.empty();
 
+	private Optional<Duration> tcpSocketTimeout = Optional.of(Duration.ofMinutes(1));
+
 	/**
 	 * Max length in bytes of a message.
 	 */
@@ -387,7 +390,9 @@ public class SyslogAppender64k extends AppenderSkeleton {
 			break;
 		case PROTOCOL_TCP:
 			this.syslogQuietWriter
-					= Optional.of(new SyslogQuietWriter(new SyslogTcpWriter64k(syslogHost, charset, tcpSocketFactory),
+					= Optional.of(
+							new SyslogQuietWriter(
+									new SyslogTcpWriter64k(syslogHost, charset, tcpSocketFactory, tcpSocketTimeout),
 							syslogFacility,
 							errorHandler));
 			break;
@@ -567,6 +572,14 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	public void setTcpSocketFactory(final SocketFactory tcpSocketFactory) {
 		this.tcpSocketFactory = Optional.ofNullable(tcpSocketFactory);
+	}
+
+	public Optional<Duration> getTcpSocketTimeout() {
+		return tcpSocketTimeout;
+	}
+
+	public void setTcpSocketTimeout(final Duration tcpSocketTimeout) {
+		this.tcpSocketTimeout = Optional.ofNullable(tcpSocketTimeout);
 	}
 
 	/**

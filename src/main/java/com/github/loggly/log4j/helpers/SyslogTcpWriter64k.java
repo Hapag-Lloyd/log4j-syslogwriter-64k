@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -21,6 +23,8 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 
 	private final Optional<SocketFactory> socketFactory;
 
+	private final Optional<Duration> socketTimeout;
+
 	private AtomicReference<Socket> socket = null;
 
 	private AtomicReference<BufferedWriter> writer = null;
@@ -28,10 +32,12 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	public SyslogTcpWriter64k(
 			final String syslogHost,
 			final Charset charset,
-			final Optional<SocketFactory> socketFactory) {
+			final Optional<SocketFactory> socketFactory,
+			final Optional<Duration> socketTimeout) {
 		super(syslogHost, charset);
 
 		this.socketFactory = socketFactory;
+		this.socketTimeout = socketTimeout;
 	}
 
 	@Override
@@ -51,6 +57,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 				final Socket socketToSet = socketFactory.isPresent()
 						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())
 						: new Socket(getSyslogHost(), getSyslogPort());
+				socketToSet.setSoTimeout(socketTimeout.map(duration -> (int) duration.get(ChronoUnit.MILLIS)).orElse(0));
 				socket.set(socketToSet);
 
 				writer.set(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));
