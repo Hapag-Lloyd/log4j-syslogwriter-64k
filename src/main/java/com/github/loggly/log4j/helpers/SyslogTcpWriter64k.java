@@ -57,7 +57,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 				final Socket socketToSet = socketFactory.isPresent()
 						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())
 						: new Socket(getSyslogHost(), getSyslogPort());
-				socketToSet.setSoTimeout((int) socketTimeout.get(ChronoUnit.MILLIS));
+				socketToSet.setSoTimeout((int) socketTimeout.toMillis());
 				socket.set(socketToSet);
 
 				writer.set(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));
