@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
@@ -213,6 +214,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	private Optional<SocketFactory> tcpSocketFactory = Optional.empty();
 
+	private Duration tcpSocketTimeout = Duration.ofMinutes(1);
+
 	/**
 	 * Max length in bytes of a message.
 	 */
@@ -386,10 +389,10 @@ public class SyslogAppender64k extends AppenderSkeleton {
 					new SyslogQuietWriter(new SyslogUdpWriter64k(syslogHost, charset), syslogFacility, errorHandler));
 			break;
 		case PROTOCOL_TCP:
-			this.syslogQuietWriter
-					= Optional.of(new SyslogQuietWriter(new SyslogTcpWriter64k(syslogHost, charset, tcpSocketFactory),
-							syslogFacility,
-							errorHandler));
+			this.syslogQuietWriter = Optional.of(new SyslogQuietWriter(
+					new SyslogTcpWriter64k(syslogHost, charset, tcpSocketFactory, tcpSocketTimeout),
+					syslogFacility,
+					errorHandler));
 			break;
 		default:
 			throw new IllegalArgumentException(String.format("Unexpected protocol: %s", protocol));
@@ -567,6 +570,14 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	public void setTcpSocketFactory(final SocketFactory tcpSocketFactory) {
 		this.tcpSocketFactory = Optional.ofNullable(tcpSocketFactory);
+	}
+
+	public Duration getTcpSocketTimeout() {
+		return tcpSocketTimeout;
+	}
+
+	public void setTcpSocketTimeout(final Duration tcpSocketTimeout) {
+		this.tcpSocketTimeout = tcpSocketTimeout == null ? Duration.ZERO : tcpSocketTimeout;
 	}
 
 	/**
