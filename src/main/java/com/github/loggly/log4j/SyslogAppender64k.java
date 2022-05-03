@@ -577,7 +577,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	}
 
 	public void setTcpSocketTimeout(final Duration tcpSocketTimeout) {
-		this.tcpSocketTimeout = tcpSocketTimeout;
+		this.tcpSocketTimeout = tcpSocketTimeout == null ? Duration.ZERO : tcpSocketTimeout;
 	}
 
 	/**
