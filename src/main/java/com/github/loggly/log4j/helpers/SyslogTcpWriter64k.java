@@ -6,7 +6,6 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -57,7 +56,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 				final Socket socketToSet = socketFactory.isPresent()
 						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())
 						: new Socket(getSyslogHost(), getSyslogPort());
-				socketToSet.setSoTimeout((int) socketTimeout.get(ChronoUnit.MILLIS));
+				socketToSet.setSoTimeout((int) socketTimeout.toMillis());
 				socket.set(socketToSet);
 
 				writer.set(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));
