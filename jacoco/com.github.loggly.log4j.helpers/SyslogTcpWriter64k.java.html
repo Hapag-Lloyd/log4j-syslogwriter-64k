@@ -5,7 +5,10 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.SocketFactory;
 
@@ -20,93 +23,87 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 public class SyslogTcpWriter64k extends SyslogWriter64k {
 	private final Optional&lt;SocketFactory&gt; socketFactory;
 
-<span class="nc" id="L23">	private volatile Optional&lt;Socket&gt; socket = Optional.empty();</span>
+	private final Duration socketTimeout;
 
-<span class="nc" id="L25">	private volatile Optional&lt;BufferedWriter&gt; writer = Optional.empty();</span>
+<span class="nc" id="L28">	private final AtomicReference&lt;Socket&gt; socket = new AtomicReference&lt;&gt;(null);</span>
+
+<span class="nc" id="L30">	private final AtomicReference&lt;BufferedWriter&gt; writer = new AtomicReference&lt;&gt;(null);</span>
 
 	public SyslogTcpWriter64k(final String syslogHost,
 			final Charset charset,
-			final Optional&lt;SocketFactory&gt; socketFactory) {
-<span class="nc" id="L30">		super(syslogHost, charset);</span>
+			final Optional&lt;SocketFactory&gt; socketFactory,
+			final Duration socketTimeout) {
+<span class="nc" id="L36">		super(syslogHost, charset);</span>
 
-<span class="nc" id="L32">		this.socketFactory = socketFactory;</span>
-<span class="nc" id="L33">	}</span>
+<span class="nc" id="L38">		this.socketFactory = socketFactory;</span>
+<span class="nc" id="L39">		this.socketTimeout = socketTimeout;</span>
+<span class="nc" id="L40">	}</span>
 
 	@Override
+	@SuppressWarnings({ &quot;checkstyle:SuppressWarnings&quot;, &quot;PMD.CloseResource&quot;, &quot;resource&quot; })
 	public void flush() throws IOException {
-<span class="nc" id="L37">		final Optional&lt;BufferedWriter&gt; writerToFlush = writer;</span>
-<span class="nc bnc" id="L38" title="All 2 branches missed.">		if (writerToFlush.isPresent()) {</span>
-<span class="nc" id="L39">			closeOnIOException(() -&gt; writerToFlush.get().flush());</span>
+<span class="nc" id="L45">		final BufferedWriter writerToFlush = writer.get();</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">		if (writerToFlush != null) {</span>
+<span class="nc" id="L47">			closeOnIOException(writerToFlush::flush);</span>
 		}
-<span class="nc" id="L41">	}</span>
+<span class="nc" id="L49">	}</span>
 
 	@SuppressWarnings({ &quot;checkstyle:SuppressWarnings&quot;, &quot;resource&quot; })
-	@SuppressFBWarnings(value = &quot;UNENCRYPTED_SOCKET&quot;,
-			justification = &quot;Offering both: insecure TCP and TCP via custom SocketFactory&quot;)
+	@SuppressFBWarnings(value = { &quot;OI_OPTIONAL_ISSUES_USES_IMMEDIATE_EXECUTION&quot;, &quot;UNENCRYPTED_SOCKET&quot; },
+			justification = &quot;false-positive, as '0' is constant; Offering both: insecure TCP and secure TCP via custom SocketFactory&quot;)
 	private BufferedWriter getWriter() throws IOException {
-<span class="nc" id="L47">		synchronized (lock) {</span>
-<span class="nc bnc" id="L48" title="All 2 branches missed.">			if (!writer.isPresent()) {</span>
-<span class="nc bnc" id="L49" title="All 2 branches missed.">				final Socket socketToSet = socketFactory.isPresent()</span>
-<span class="nc" id="L50">						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())</span>
-<span class="nc" id="L51">						: new Socket(getSyslogHost(), getSyslogPort());</span>
-<span class="nc" id="L52">				socket = Optional.of(socketToSet);</span>
+<span class="nc" id="L55">		synchronized (lock) {</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">			if (writer.get() == null) {</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">				final Socket socketToSet = socketFactory.isPresent()</span>
+<span class="nc" id="L58">						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())</span>
+<span class="nc" id="L59">						: new Socket(getSyslogHost(), getSyslogPort());</span>
+<span class="nc" id="L60">				socketToSet.setSoTimeout((int) socketTimeout.get(ChronoUnit.MILLIS));</span>
+<span class="nc" id="L61">				socket.set(socketToSet);</span>
 
-<span class="nc" id="L54">				writer = Optional</span>
-<span class="nc" id="L55">						.of(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));</span>
+<span class="nc" id="L63">				writer.set(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));</span>
 			}
-<span class="nc" id="L57">			return writer.get();</span>
+<span class="nc" id="L65">			return writer.get();</span>
 		}
 	}
 
 	@Override
 	public void write(final String string) throws IOException {
 		// compute syslog frame according to: https://tools.ietf.org/html/rfc6587
-<span class="nc" id="L64">		final String syslogFrame = String.format(&quot;%s %s&quot;, string.length(), string);</span>
-<span class="nc" id="L65">		closeOnIOException(() -&gt; getWriter().append(syslogFrame));</span>
-<span class="nc" id="L66">	}</span>
+<span class="nc" id="L72">		final String syslogFrame = String.format(&quot;%s %s&quot;, string.length(), string);</span>
+<span class="nc" id="L73">		closeOnIOException(() -&gt; getWriter().append(syslogFrame));</span>
+<span class="nc" id="L74">	}</span>
 
 	@Override
 	public void write(final char[] buf, final int off, final int len) throws IOException {
-<span class="nc" id="L70">		this.write(new String(buf, off, len));</span>
-<span class="nc" id="L71">	}</span>
+<span class="nc" id="L78">		this.write(new String(buf, off, len));</span>
+<span class="nc" id="L79">	}</span>
 
 	@Override
 	@SuppressFBWarnings(value = &quot;AFBR_ABNORMAL_FINALLY_BLOCK_RETURN&quot;, justification = &quot;Shouldn't matter in this case.&quot;)
 	public void close() throws IOException {
-		final Optional&lt;BufferedWriter&gt; writerToClose;
-		final Optional&lt;Socket&gt; socketToClose;
-
-<span class="nc" id="L79">		synchronized (lock) {</span>
-<span class="nc" id="L80">			writerToClose = writer;</span>
-<span class="nc" id="L81">			writer = Optional.empty();</span>
-
-<span class="nc" id="L83">			socketToClose = socket;</span>
-<span class="nc" id="L84">			socket = Optional.empty();</span>
-<span class="nc" id="L85">		}</span>
-
-		try {
-<span class="nc bnc" id="L88" title="All 2 branches missed.">			if (writerToClose.isPresent()) {</span>
-<span class="nc" id="L89">				writerToClose.get().close();</span>
+<span class="nc" id="L84">		synchronized (lock) {</span>
+<span class="nc" id="L85">			try (Socket socketToClose = socket.get();</span>
+<span class="nc" id="L86">					BufferedWriter writerToClose = writer.get()) {</span>
+				// nothing
+<span class="nc bnc" id="L88" title="All 4 branches missed.">			} finally {</span>
+<span class="nc" id="L89">				writer.set(null);</span>
+<span class="nc" id="L90">				socket.set(null);</span>
 			}
-		} finally {
-<span class="nc bnc" id="L92" title="All 2 branches missed.">			if (socketToClose.isPresent()) {</span>
-<span class="nc" id="L93">				socketToClose.get().close();</span>
-			}
-		}
-<span class="nc" id="L96">	}</span>
+<span class="nc" id="L92">		}</span>
+<span class="nc" id="L93">	}</span>
 
 	private void closeOnIOException(final IORunnable runnable) throws IOException {
 		try {
-<span class="nc" id="L100">			runnable.run();</span>
-<span class="nc" id="L101">		} catch (final IOException e) {</span>
+<span class="nc" id="L97">			runnable.run();</span>
+<span class="nc" id="L98">		} catch (final IOException e) {</span>
 			try {
-<span class="nc" id="L103">				close();</span>
-<span class="nc" id="L104">			} catch (@SuppressWarnings(&quot;unused&quot;) final IOException ignored) {</span>
-				// ignore because it should not hide the original exception
-<span class="nc" id="L106">			}</span>
-<span class="nc" id="L107">			throw e;</span>
-<span class="nc" id="L108">		}</span>
-<span class="nc" id="L109">	}</span>
+<span class="nc" id="L100">				close();</span>
+<span class="nc" id="L101">			} catch (@SuppressWarnings(&quot;unused&quot;) final IOException ignored) {</span>
+				// ignore because it shall not hide the original exception
+<span class="nc" id="L103">			}</span>
+<span class="nc" id="L104">			throw e;</span>
+<span class="nc" id="L105">		}</span>
+<span class="nc" id="L106">	}</span>
 
 	@FunctionalInterface
 	private interface IORunnable {
