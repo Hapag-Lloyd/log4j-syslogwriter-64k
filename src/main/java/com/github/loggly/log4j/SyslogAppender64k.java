@@ -214,7 +214,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 	private Optional<SocketFactory> tcpSocketFactory = Optional.empty();
 
-	private Optional<Duration> tcpSocketTimeout = Optional.of(Duration.ofMinutes(1));
+	private Duration tcpSocketTimeout = Duration.ofMinutes(1);
 
 	/**
 	 * Max length in bytes of a message.
@@ -572,12 +572,12 @@ public class SyslogAppender64k extends AppenderSkeleton {
 		this.tcpSocketFactory = Optional.ofNullable(tcpSocketFactory);
 	}
 
-	public Optional<Duration> getTcpSocketTimeout() {
+	public Duration getTcpSocketTimeout() {
 		return tcpSocketTimeout;
 	}
 
 	public void setTcpSocketTimeout(final Duration tcpSocketTimeout) {
-		this.tcpSocketTimeout = Optional.ofNullable(tcpSocketTimeout);
+		this.tcpSocketTimeout = tcpSocketTimeout;
 	}
 
 	/**

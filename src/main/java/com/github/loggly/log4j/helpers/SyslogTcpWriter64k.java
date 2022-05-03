@@ -23,7 +23,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 public class SyslogTcpWriter64k extends SyslogWriter64k {
 	private final Optional<SocketFactory> socketFactory;
 
-	private final Optional<Duration> socketTimeout;
+	private final Duration socketTimeout;
 
 	private final AtomicReference<Socket> socket = new AtomicReference<>(null);
 
@@ -32,7 +32,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	public SyslogTcpWriter64k(final String syslogHost,
 			final Charset charset,
 			final Optional<SocketFactory> socketFactory,
-			final Optional<Duration> socketTimeout) {
+			final Duration socketTimeout) {
 		super(syslogHost, charset);
 
 		this.socketFactory = socketFactory;
@@ -57,8 +57,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 				final Socket socketToSet = socketFactory.isPresent()
 						? socketFactory.get().createSocket(getSyslogHost(), getSyslogPort())
 						: new Socket(getSyslogHost(), getSyslogPort());
-				socketToSet
-						.setSoTimeout(socketTimeout.map(duration -> (int) duration.get(ChronoUnit.MILLIS)).orElse(0));
+				socketToSet.setSoTimeout((int) socketTimeout.get(ChronoUnit.MILLIS));
 				socket.set(socketToSet);
 
 				writer.set(new BufferedWriter(new OutputStreamWriter(socketToSet.getOutputStream(), getCharset())));
