@@ -78,9 +78,11 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	}
 
 	@Override
+	@SuppressWarnings("PMD.EmptyControlStatement")
 	@SuppressFBWarnings(value = "AFBR_ABNORMAL_FINALLY_BLOCK_RETURN", justification = "Shouldn't matter in this case.")
 	public void close() throws IOException {
 		synchronized (lock) {
+			// Using try-with-resource to avoid null checks and nested finally blocks
 			try (Socket socketToClose = socket.get();
 					BufferedWriter writerToClose = writer.get()) {
 				// nothing
