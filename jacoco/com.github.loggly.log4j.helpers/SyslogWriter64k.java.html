@@ -10,8 +10,11 @@ import java.nio.charset.Charset;
 
 import org.apache.log4j.helpers.LogLog;
 
+import de.larssh.utils.annotations.PackagePrivate;
+
 abstract class SyslogWriter64k extends Writer {
-	private static final int DEFAULT_SYSLOG_PORT = 514;
+	@PackagePrivate
+	static final int DEFAULT_SYSLOG_PORT = 514;
 
 	private final Charset charset;
 
@@ -20,42 +23,42 @@ abstract class SyslogWriter64k extends Writer {
 	private final int syslogPort;
 
 	@SuppressWarnings(&quot;PMD.GuardLogStatement&quot;)
-<span class="fc" id="L23">	protected SyslogWriter64k(final String syslogHost, final Charset charset) {</span>
-<span class="fc" id="L24">		this.charset = charset;</span>
+<span class="fc" id="L26">	protected SyslogWriter64k(final String syslogHost, final Charset charset) {</span>
+<span class="fc" id="L27">		this.charset = charset;</span>
 
-<span class="fc" id="L26">		InetAddress host = null;</span>
-<span class="fc" id="L27">		int port = -1;</span>
+<span class="fc" id="L29">		InetAddress host = null;</span>
+<span class="fc" id="L30">		int port = -1;</span>
 		try {
-<span class="fc bfc" id="L29" title="All 2 branches covered.">			if (syslogHost.contains(&quot;:&quot;)) {</span>
-<span class="fc" id="L30">				final URL url = new URL(&quot;http://&quot; + syslogHost);</span>
-<span class="fc" id="L31">				host = InetAddress.getByName(url.getHost());</span>
-<span class="fc" id="L32">				port = url.getPort();</span>
-<span class="fc" id="L33">			} else {</span>
-<span class="fc" id="L34">				host = InetAddress.getByName(syslogHost);</span>
-<span class="fc" id="L35">				port = DEFAULT_SYSLOG_PORT;</span>
+<span class="fc bfc" id="L32" title="All 2 branches covered.">			if (syslogHost.contains(&quot;:&quot;)) {</span>
+<span class="fc" id="L33">				final URL url = new URL(&quot;http://&quot; + syslogHost);</span>
+<span class="fc" id="L34">				host = InetAddress.getByName(url.getHost());</span>
+<span class="fc" id="L35">				port = url.getPort();</span>
+<span class="fc" id="L36">			} else {</span>
+<span class="fc" id="L37">				host = InetAddress.getByName(syslogHost);</span>
+<span class="fc" id="L38">				port = DEFAULT_SYSLOG_PORT;</span>
 			}
-<span class="nc" id="L37">		} catch (final UnknownHostException | MalformedURLException e) {</span>
-<span class="nc" id="L38">			LogLog.error(&quot;Could not find &quot; + syslogHost + &quot;. All logging will FAIL.&quot;, e);</span>
-<span class="fc" id="L39">		}</span>
-<span class="fc" id="L40">		this.syslogHost = host;</span>
-<span class="fc" id="L41">		this.syslogPort = port;</span>
-<span class="fc" id="L42">	}</span>
+<span class="nc" id="L40">		} catch (final UnknownHostException | MalformedURLException e) {</span>
+<span class="nc" id="L41">			LogLog.error(&quot;Could not find &quot; + syslogHost + &quot;. All logging will FAIL.&quot;, e);</span>
+<span class="fc" id="L42">		}</span>
+<span class="fc" id="L43">		this.syslogHost = host;</span>
+<span class="fc" id="L44">		this.syslogPort = port;</span>
+<span class="fc" id="L45">	}</span>
 
 	protected InetAddress getSyslogHost() {
-<span class="fc" id="L45">		return syslogHost;</span>
+<span class="fc" id="L48">		return syslogHost;</span>
 	}
 
 	protected int getSyslogPort() {
-<span class="fc" id="L49">		return syslogPort;</span>
+<span class="fc" id="L52">		return syslogPort;</span>
 	}
 
 	protected Charset getCharset() {
-<span class="fc" id="L53">		return charset;</span>
+<span class="fc" id="L56">		return charset;</span>
 	}
 
 	@Override
 	public void write(final char[] buf, final int off, final int len) throws IOException {
-<span class="nc" id="L58">		this.write(new String(buf, off, len));</span>
-<span class="nc" id="L59">	}</span>
+<span class="nc" id="L61">		this.write(new String(buf, off, len));</span>
+<span class="nc" id="L62">	}</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>
