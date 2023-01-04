@@ -10,8 +10,11 @@ import java.nio.charset.Charset;
 
 import org.apache.log4j.helpers.LogLog;
 
+import de.larssh.utils.annotations.PackagePrivate;
+
 abstract class SyslogWriter64k extends Writer {
-	private static final int DEFAULT_SYSLOG_PORT = 514;
+	@PackagePrivate
+	static final int DEFAULT_SYSLOG_PORT = 514;
 
 	private final Charset charset;
 
