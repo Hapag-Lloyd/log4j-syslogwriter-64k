@@ -17,6 +17,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * SyslogWriter64k is a wrapper around the java.net.DatagramSocket class so that
  * it behaves like a java.io.Writer.
  */
+@SuppressWarnings("PMD.CloseResource")
 @SuppressFBWarnings(value = "IMC_IMMATURE_CLASS_NO_TOSTRING",
 		justification = "Instance fields cannot be stringified nicely, therefore toString does not make that much sense.")
 public class SyslogTcpWriter64k extends SyslogWriter64k {
@@ -83,7 +84,9 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	public void close() throws IOException {
 		synchronized (lock) {
 			// Using try-with-resource to avoid null checks and nested finally blocks
-			try (Socket socketToClose = socket.get();
+			try (@SuppressWarnings("PMD.UnusedLocalVariable")
+			Socket socketToClose = socket.get();
+					@SuppressWarnings("PMD.UnusedLocalVariable")
 					BufferedWriter writerToClose = writer.get()) {
 				// nothing
 			} finally {

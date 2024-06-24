@@ -37,10 +37,11 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * daemon.
  */
 @SuppressWarnings("PMD.GodClass")
+@SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "Accepted risk to avoid incompatible changes")
 public class SyslogAppender64k extends AppenderSkeleton {
-	// The following constants are extracted from a syslog.h file
-	// copyrighted by the Regents of the University of California
-	// I hope nobody at Berkley gets offended.
+	// The following constants are extracted from a syslog.h file copyrighted by the
+	// Regents of the University of California I hope nobody at Berkley gets
+	// offended.
 	/** Kernel messages */
 	public static final int LOG_KERN = Finals.constant(0);
 
@@ -268,7 +269,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 
 		synchronized (lock) {
 			syslogQuietWriter.ifPresent(syslogWriter -> {
-				try (Writer writerToClose = syslogWriter) {
+				try (@SuppressWarnings("PMD.UnusedLocalVariable")
+				Writer writerToClose = syslogWriter) {
 					if (layoutHeaderChecked && layout != null && layout.getFooter() != null) {
 						sendLayoutMessage(layout.getFooter());
 					}
@@ -640,8 +642,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	private void sendPackets(final String header, final String packet) {
 		final int byteCount = packet.getBytes(charset).length;
 
-		// If packet is less than limit, then write it.
-		// Else, write in chunks.
+		// If packet is less than limit, then write it. Else, write in chunks.
 		if (byteCount <= maxMessageLength) {
 			syslogQuietWriter.get().write(packet);
 		} else {
