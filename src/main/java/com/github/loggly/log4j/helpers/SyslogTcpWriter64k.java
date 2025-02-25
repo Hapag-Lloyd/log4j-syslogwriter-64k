@@ -48,7 +48,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 		}
 	}
 
-	@SuppressWarnings({ "checkstyle:SuppressWarnings", "resource" })
+	@SuppressWarnings({ "checkstyle:SuppressWarnings", "PMD.AvoidSynchronizedStatement", "resource" })
 	@SuppressFBWarnings(value = { "OI_OPTIONAL_ISSUES_USES_IMMEDIATE_EXECUTION", "UNENCRYPTED_SOCKET" },
 			justification = "false-positive, as '0' is constant; Offering both: insecure TCP and secure TCP via custom SocketFactory")
 	private BufferedWriter getWriter() throws IOException {
@@ -79,7 +79,7 @@ public class SyslogTcpWriter64k extends SyslogWriter64k {
 	}
 
 	@Override
-	@SuppressWarnings("PMD.EmptyControlStatement")
+	@SuppressWarnings({ "PMD.AvoidSynchronizedStatement", "PMD.EmptyControlStatement" })
 	@SuppressFBWarnings(value = "AFBR_ABNORMAL_FINALLY_BLOCK_RETURN", justification = "Shouldn't matter in this case.")
 	public void close() throws IOException {
 		synchronized (lock) {

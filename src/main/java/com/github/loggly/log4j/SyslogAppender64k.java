@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.SocketFactory;
 
@@ -196,7 +198,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 		return Optional.ofNullable(facilityName).map(String::trim).map(FACILITY_VALUES::get).orElse(-1);
 	}
 
-	private final Object lock = new Object();
+	private final Lock lock = new ReentrantLock();
 
 	private Charset charset = StandardCharsets.UTF_8;
 
@@ -264,10 +266,13 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * @since 0.8.4
 	 */
 	@Override
+	@SuppressFBWarnings(value = "MDM_WAIT_WITHOUT_TIMEOUT",
+			justification = "Using ReentrantLock instead of synchronized")
 	public void close() {
 		closed = true;
 
-		synchronized (lock) {
+		try {
+			lock.lock();
 			syslogQuietWriter.ifPresent(syslogWriter -> {
 				try (@SuppressWarnings("PMD.UnusedLocalVariable")
 				Writer writerToClose = syslogWriter) {
@@ -280,6 +285,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 					syslogQuietWriter = Optional.empty();
 				}
 			});
+		} finally {
+			lock.unlock();
 		}
 	}
 
@@ -300,16 +307,20 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	/** {@inheritDoc} */
 	@Override
 	@SuppressWarnings({ "PMD.CloseResource", "PMD.GuardLogStatement" })
+	@SuppressFBWarnings(value = "MDM_WAIT_WITHOUT_TIMEOUT",
+			justification = "Using ReentrantLock instead of synchronized")
 	public void append(final LoggingEvent event) {
 		if (!isAsSevereAsThreshold(event.getLevel())) {
 			return;
 		}
 
-		synchronized (lock) {
+		try {
+			lock.lock();
 			if (!syslogQuietWriter.isPresent()) {
 				errorHandler.error("No syslog host is set for SyslogAppender named \"" + this.name + "\".");
 				return;
 			}
+			@SuppressWarnings({ "checkstyle:SuppressWarnings", "resource" })
 			final SyslogQuietWriter syslogWriter = syslogQuietWriter.get();
 
 			if (!layoutHeaderChecked) {
@@ -331,6 +342,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 			}
 
 			syslogWriter.flush();
+		} finally {
+			lock.unlock();
 		}
 	}
 
@@ -338,14 +351,19 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 * This method returns immediately as options are activated when they are set.
 	 */
 	@Override
+	@SuppressFBWarnings(value = "MDM_WAIT_WITHOUT_TIMEOUT",
+			justification = "Using ReentrantLock instead of synchronized")
 	public void activateOptions() {
 		if (header) {
 			// Initialize local host name
 			getLocalHostname();
 		}
 		if (layout != null && layout.getHeader() != null) {
-			synchronized (lock) {
+			try {
+				lock.lock();
 				sendLayoutMessage(layout.getHeader());
+			} finally {
+				lock.unlock();
 			}
 		}
 		layoutHeaderChecked = true;
@@ -375,7 +393,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 		return builder.toString();
 	}
 
-	@SuppressWarnings("PMD.CloseResource")
+	@SuppressWarnings({ "checkstyle:SuppressWarnings", "PMD.CloseResource", "resource" })
 	private void createSyslogWriter() {
 		syslogQuietWriter.ifPresent(syslogWriter -> {
 			try {
