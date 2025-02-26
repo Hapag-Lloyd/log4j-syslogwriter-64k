@@ -52,19 +52,4 @@
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>
-
-	<build>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<artifactId>maven-dependency-plugin</artifactId>
-					<configuration>
-						<usedDependencies combine.children="append">
-							<usedDependency>org.junit.vintage:junit-vintage-engine</usedDependency>
-						</usedDependencies>
-					</configuration>
-				</plugin>
-			</plugins>
-		</pluginManagement>
-	</build>
 </project>

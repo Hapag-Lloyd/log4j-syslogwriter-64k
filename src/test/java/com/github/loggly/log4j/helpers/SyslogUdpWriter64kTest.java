@@ -18,8 +18,7 @@ import de.larssh.utils.annotations.PackagePrivate;
  */
 @SuppressWarnings("java:S5786")
 public class SyslogUdpWriter64kTest {
-	@PackagePrivate
-	SyslogUdpWriter64kTest() {
+	public SyslogUdpWriter64kTest() {
 		// nothing to initialize
 	}
 
