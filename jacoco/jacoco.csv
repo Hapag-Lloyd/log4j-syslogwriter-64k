@@ -2,4 +2,4 @@ GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_
 log4j Syslog Writer 64k,com.github.loggly.log4j.helpers,SyslogUdpWriter64k,23,43,1,1,5,13,3,3,2,3
 log4j Syslog Writer 64k,com.github.loggly.log4j.helpers,SyslogWriter64k,22,55,0,2,4,18,1,5,1,4
 log4j Syslog Writer 64k,com.github.loggly.log4j.helpers,SyslogTcpWriter64k,191,0,10,0,41,0,13,0,8,0
-log4j Syslog Writer 64k,com.github.loggly.log4j,SyslogAppender64k,1102,0,67,0,245,0,77,0,43,0
+log4j Syslog Writer 64k,com.github.loggly.log4j,SyslogAppender64k,1094,0,67,0,245,0,77,0,43,0
