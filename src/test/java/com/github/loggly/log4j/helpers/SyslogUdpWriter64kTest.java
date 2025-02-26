@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 
 import de.larssh.utils.annotations.PackagePrivate;
 
+/**
+ * Tests {@link SyslogUdpWriter64k}
+ */
 @PackagePrivate
 class SyslogUdpWriter64kTest {
 	@PackagePrivate
