@@ -40,7 +40,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * Use SyslogAppender64k to send log messages upto 64K to a remote syslog
  * daemon.
  */
-@SuppressWarnings("PMD.GodClass")
+@SuppressWarnings({ "PMD.ExcessiveImports", "PMD.GodClass" })
 @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "Accepted risk to avoid incompatible changes")
 public class SyslogAppender64k extends AppenderSkeleton {
 	// The following constants are extracted from a syslog.h file copyrighted by the
