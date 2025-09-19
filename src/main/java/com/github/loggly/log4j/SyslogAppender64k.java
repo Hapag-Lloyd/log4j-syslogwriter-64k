@@ -6,9 +6,11 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,7 +40,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * Use SyslogAppender64k to send log messages upto 64K to a remote syslog
  * daemon.
  */
-@SuppressWarnings("PMD.GodClass")
+@SuppressWarnings({ "PMD.ExcessiveImports", "PMD.GodClass" })
 @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "Accepted risk to avoid incompatible changes")
 public class SyslogAppender64k extends AppenderSkeleton {
 	// The following constants are extracted from a syslog.h file copyrighted by the
@@ -131,8 +133,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	/**
 	 * Date format used if header = true.
 	 */
-	private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT
-			= ThreadLocal.withInitial(() -> new SimpleDateFormat("MMM dd HH:mm:ss ", Locale.ENGLISH));
+	private static final DateTimeFormatter DATE_FORMAT
+			= DateTimeFormatter.ofPattern("MMM dd HH:mm:ss ", Locale.ENGLISH);
 
 	/**
 	 * Maps integer values to the corresponding syslog facility name.
@@ -633,7 +635,8 @@ public class SyslogAppender64k extends AppenderSkeleton {
 			return "";
 		}
 
-		final StringBuilder builder = new StringBuilder(DATE_FORMAT.get().format(new Date(timeStamp)));
+		final StringBuilder builder = new StringBuilder(
+				LocalDateTime.ofInstant(Instant.ofEpochMilli(timeStamp), ZoneOffset.UTC).format(DATE_FORMAT));
 		// RFC 3164 says leading space, not leading zero on days 1-9
 		if (builder.charAt(4) == '0') {
 			builder.setCharAt(4, ' ');
@@ -650,7 +653,7 @@ public class SyslogAppender64k extends AppenderSkeleton {
 	 */
 	private void sendLayoutMessage(final String message) {
 		syslogQuietWriter.ifPresent(syslogWriter -> {
-			final String packet = createPacket(getPacketHeader(new Date().getTime()), message);
+			final String packet = createPacket(getPacketHeader(Instant.now().toEpochMilli()), message);
 			syslogWriter.setLevel(6);
 			syslogWriter.write(packet);
 		});
